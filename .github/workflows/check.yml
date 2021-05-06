@@ -40,26 +40,25 @@ jobs:
     - name: go_vet
       run: make
 
-  fix-protocol-test:
-    name: protocol test
-    runs-on: ubuntu-18.04
-    strategy:
-      fail-fast: false
-      matrix:
-        fix-version: [fix42, fix44]
-#        fix-version: [fix40, fix41, fix42, fix43, fix44, fix50, fix50sp1, fix50sp2]
-
-    steps:
-    - name: setup go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.15.x
-    - uses: actions/checkout@v2
-    - name: go-mod
-      run: go mod download
-    - name: go-build
-      run: make build_accept
-    - name: fix_test
-      env:
-        fix_version: ${{ matrix.fix-version }}
-      run: make $fix_version
+#  fix-protocol-test:
+#    name: protocol test
+#    runs-on: ubuntu-18.04
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        fix-version: [fix42, fix44]
+#
+#    steps:
+#    - name: setup go
+#      uses: actions/setup-go@v2
+#      with:
+#        go-version: 1.15.x
+#    - uses: actions/checkout@v2
+#    - name: go-mod
+#      run: go mod download
+#    - name: go-build
+#      run: make build build_accept
+#    - name: fix_test
+#      env:
+#        fix_version: ${{ matrix.fix-version }}
+#      run: make $fix_version

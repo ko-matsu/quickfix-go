@@ -166,8 +166,11 @@ func (suite *MessageStoreTestSuite) TestMessageStore_GetMessages_VariousRanges()
 func (suite *MessageStoreTestSuite) TestMessageStore_CreationTime() {
 	assert.False(suite.T(), suite.msgStore.CreationTime().IsZero())
 
+	// This test will be called multiple times in parallel.
 	t0 := time.Now()
+	time.Sleep(time.Second * 2)
 	suite.msgStore.Reset()
+	time.Sleep(time.Second * 2)
 	t1 := time.Now()
 	require.True(suite.T(), suite.msgStore.CreationTime().After(t0))
 	require.True(suite.T(), suite.msgStore.CreationTime().Before(t1))

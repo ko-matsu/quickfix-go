@@ -24,7 +24,7 @@ vet:
 	go vet `go list ./... | grep -v quickfix/gen`
 
 lint:
-	go get github.com/golang/lint/golint
+	go get golang.org/x/lint/golint
 	golint .
 
 test: 

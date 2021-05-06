@@ -2,9 +2,11 @@ module github.com/alpacahq/quickfix
 
 require (
 	cloud.google.com/go v0.26.0 // indirect
+	github.com/armon/go-proxyproto v0.0.0-20200108142055-f0b8253b1507
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/denisenkom/go-mssqldb v0.0.0-20180824013952-8fac8b954edb // indirect
 	github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5 // indirect
+	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8
 	github.com/go-sql-driver/mysql v1.4.0 // indirect
 	github.com/google/go-cmp v0.2.0 // indirect
 	github.com/jinzhu/gorm v1.9.1

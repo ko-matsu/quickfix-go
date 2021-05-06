@@ -129,7 +129,7 @@ func (s *SessionFactorySuite) TestResendRequestChunkSize() {
 	s.Equal(2500, session.ResendRequestChunkSize)
 
 	s.SessionSettings.Set(config.ResendRequestChunkSize, "notanint")
-	session, err = s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
+	_, err = s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
 	s.NotNil(err)
 }
 
@@ -353,6 +353,8 @@ func (s *SessionFactorySuite) TestNewSessionBuildInitiators() {
 	s.True(session.InitiateLogon)
 	s.Equal(34*time.Second, session.HeartBtInt)
 	s.Equal(30*time.Second, session.ReconnectInterval)
+	s.Equal(10*time.Second, session.LogonTimeout)
+	s.Equal(2*time.Second, session.LogoutTimeout)
 	s.Equal("127.0.0.1:5000", session.SocketConnectAddress[0])
 }
 
@@ -397,6 +399,54 @@ func (s *SessionFactorySuite) TestNewSessionBuildInitiatorsValidReconnectInterva
 	s.SessionSettings.Set(config.ReconnectInterval, "-20")
 	_, err = s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
 	s.NotNil(err, "ReconnectInterval must be greater than zero")
+}
+
+func (s *SessionFactorySuite) TestNewSessionBuildInitiatorsValidLogoutTimeout() {
+	s.sessionFactory.BuildInitiators = true
+	s.SessionSettings.Set(config.HeartBtInt, "34")
+	s.SessionSettings.Set(config.SocketConnectHost, "127.0.0.1")
+	s.SessionSettings.Set(config.SocketConnectPort, "3000")
+
+	s.SessionSettings.Set(config.LogoutTimeout, "45")
+	session, err := s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
+	s.Nil(err)
+	s.Equal(45*time.Second, session.LogoutTimeout)
+
+	s.SessionSettings.Set(config.LogoutTimeout, "not a number")
+	_, err = s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
+	s.NotNil(err, "LogoutTimeout must be a number")
+
+	s.SessionSettings.Set(config.LogoutTimeout, "0")
+	_, err = s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
+	s.NotNil(err, "LogoutTimeout must be greater than zero")
+
+	s.SessionSettings.Set(config.LogoutTimeout, "-20")
+	_, err = s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
+	s.NotNil(err, "LogoutTimeout must be greater than zero")
+}
+
+func (s *SessionFactorySuite) TestNewSessionBuildInitiatorsValidLogonTimeout() {
+	s.sessionFactory.BuildInitiators = true
+	s.SessionSettings.Set(config.HeartBtInt, "34")
+	s.SessionSettings.Set(config.SocketConnectHost, "127.0.0.1")
+	s.SessionSettings.Set(config.SocketConnectPort, "3000")
+
+	s.SessionSettings.Set(config.LogonTimeout, "45")
+	session, err := s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
+	s.Nil(err)
+	s.Equal(45*time.Second, session.LogonTimeout)
+
+	s.SessionSettings.Set(config.LogonTimeout, "not a number")
+	_, err = s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
+	s.NotNil(err, "LogonTimeout must be a number")
+
+	s.SessionSettings.Set(config.LogonTimeout, "0")
+	_, err = s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
+	s.NotNil(err, "LogonTimeout must be greater than zero")
+
+	s.SessionSettings.Set(config.LogonTimeout, "-20")
+	_, err = s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
+	s.NotNil(err, "LogonTimeout must be greater than zero")
 }
 
 func (s *SessionFactorySuite) TestConfigureSocketConnectAddress() {
@@ -468,7 +518,7 @@ func (s *SessionFactorySuite) TestConfigureSocketConnectAddressMulti() {
 func (s *SessionFactorySuite) TestNewSessionTimestampPrecision() {
 	s.SessionSettings.Set(config.TimeStampPrecision, "blah")
 
-	session, err := s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
+	_, err := s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
 	s.NotNil(err)
 
 	var tests = []struct {
@@ -483,7 +533,7 @@ func (s *SessionFactorySuite) TestNewSessionTimestampPrecision() {
 
 	for _, test := range tests {
 		s.SessionSettings.Set(config.TimeStampPrecision, test.config)
-		session, err = s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
+		session, err := s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
 		s.Nil(err)
 
 		s.Equal(session.timestampPrecision, test.precision)
@@ -492,19 +542,19 @@ func (s *SessionFactorySuite) TestNewSessionTimestampPrecision() {
 
 func (s *SessionFactorySuite) TestNewSessionMaxLatency() {
 	s.SessionSettings.Set(config.MaxLatency, "not a number")
-	session, err := s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
+	_, err := s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
 	s.NotNil(err, "MaxLatency must be a number")
 
 	s.SessionSettings.Set(config.MaxLatency, "-20")
-	session, err = s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
+	_, err = s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
 	s.NotNil(err, "MaxLatency must be positive")
 
 	s.SessionSettings.Set(config.MaxLatency, "0")
-	session, err = s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
+	_, err = s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
 	s.NotNil(err, "MaxLatency must be positive")
 
 	s.SessionSettings.Set(config.MaxLatency, "20")
-	session, err = s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
+	session, err := s.newSession(s.SessionID, s.MessageStoreFactory, s.SessionSettings, s.LogFactory, s.App)
 	s.Nil(err)
 	s.Equal(session.MaxLatency, 20*time.Second)
 }

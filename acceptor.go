@@ -123,7 +123,7 @@ func (a *Acceptor) Stop() {
 	a.sessionGroup.Wait()
 }
 
-//Get remote IP address for a given session.
+//RemoteAddr Get remote IP address for a given session.
 func (a *Acceptor) RemoteAddr(sessionID SessionID) (net.Addr, bool) {
 	addr, ok := a.sessionAddr[sessionID]
 	return addr, ok

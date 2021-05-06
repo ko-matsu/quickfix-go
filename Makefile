@@ -21,7 +21,9 @@ fmt:
 	go fmt `go list ./... | grep -v quickfix/gen`
 
 vet:
-	go vet `go list ./... | grep -v quickfix/gen`
+	go vet . ./config ./datadictionary ./enum ./field ./internal ./tag
+	go vet ./cmd/generate-fix ./cmd/generate-fix/internal
+	go vet ./_test
 
 lint:
 	go get golang.org/x/lint/golint

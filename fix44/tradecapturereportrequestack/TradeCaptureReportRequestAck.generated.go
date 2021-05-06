@@ -3,11 +3,11 @@ package tradecapturereportrequestack
 import (
 	"github.com/shopspring/decimal"
 
-	"github.com/alpacahq/quickfix"
-	"github.com/alpacahq/quickfix/enum"
-	"github.com/alpacahq/quickfix/field"
-	"github.com/alpacahq/quickfix/fix44"
-	"github.com/alpacahq/quickfix/tag"
+	"github.com/cryptogarageinc/quickfix-go"
+	"github.com/cryptogarageinc/quickfix-go/enum"
+	"github.com/cryptogarageinc/quickfix-go/field"
+	"github.com/cryptogarageinc/quickfix-go/fix44"
+	"github.com/cryptogarageinc/quickfix-go/tag"
 )
 
 //TradeCaptureReportRequestAck is the fix44 TradeCaptureReportRequestAck type, MsgType = AQ

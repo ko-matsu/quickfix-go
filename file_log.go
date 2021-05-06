@@ -6,7 +6,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/alpacahq/quickfix/config"
+	"github.com/cryptogarageinc/quickfix-go/config"
 )
 
 type fileLog struct {

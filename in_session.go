@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"time"
 
-	"github.com/alpacahq/quickfix/internal"
+	"github.com/cryptogarageinc/quickfix-go/internal"
 )
 
 type inSession struct{ loggedOn }

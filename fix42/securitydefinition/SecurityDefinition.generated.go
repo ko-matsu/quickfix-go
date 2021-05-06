@@ -3,11 +3,11 @@ package securitydefinition
 import (
 	"github.com/shopspring/decimal"
 
-	"github.com/alpacahq/quickfix"
-	"github.com/alpacahq/quickfix/enum"
-	"github.com/alpacahq/quickfix/field"
-	"github.com/alpacahq/quickfix/fix42"
-	"github.com/alpacahq/quickfix/tag"
+	"github.com/cryptogarageinc/quickfix-go"
+	"github.com/cryptogarageinc/quickfix-go/enum"
+	"github.com/cryptogarageinc/quickfix-go/field"
+	"github.com/cryptogarageinc/quickfix-go/fix42"
+	"github.com/cryptogarageinc/quickfix-go/tag"
 )
 
 //SecurityDefinition is the fix42 SecurityDefinition type, MsgType = d

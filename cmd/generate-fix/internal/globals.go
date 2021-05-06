@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/alpacahq/quickfix/datadictionary"
+	"github.com/cryptogarageinc/quickfix-go/datadictionary"
 )
 
 type fieldTypeMap map[string]*datadictionary.FieldType

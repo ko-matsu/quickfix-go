@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alpacahq/quickfix/internal"
+	"github.com/cryptogarageinc/quickfix-go/internal"
 	"github.com/stretchr/testify/suite"
 )
 

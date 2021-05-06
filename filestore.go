@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/alpacahq/quickfix/config"
+	"github.com/cryptogarageinc/quickfix-go/config"
 )
 
 type msgDef struct {

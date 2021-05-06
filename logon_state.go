@@ -3,7 +3,7 @@ package quickfix
 import (
 	"bytes"
 
-	"github.com/alpacahq/quickfix/internal"
+	"github.com/cryptogarageinc/quickfix-go/internal"
 )
 
 type logonState struct{ connectedNotLoggedOn }

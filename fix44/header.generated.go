@@ -3,10 +3,10 @@ package fix44
 import (
 	"time"
 
-	"github.com/alpacahq/quickfix"
-	"github.com/alpacahq/quickfix/enum"
-	"github.com/alpacahq/quickfix/field"
-	"github.com/alpacahq/quickfix/tag"
+	"github.com/cryptogarageinc/quickfix-go"
+	"github.com/cryptogarageinc/quickfix-go/enum"
+	"github.com/cryptogarageinc/quickfix-go/field"
+	"github.com/cryptogarageinc/quickfix-go/tag"
 )
 
 //Header is the fix44 Header type

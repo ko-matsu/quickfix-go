@@ -1,7 +1,7 @@
 package quickfix
 
 import (
-	"github.com/alpacahq/quickfix/datadictionary"
+	"github.com/cryptogarageinc/quickfix-go/datadictionary"
 )
 
 type validator interface {

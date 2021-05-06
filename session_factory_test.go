@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alpacahq/quickfix/config"
-	"github.com/alpacahq/quickfix/internal"
+	"github.com/cryptogarageinc/quickfix-go/config"
+	"github.com/cryptogarageinc/quickfix-go/internal"
 	"github.com/stretchr/testify/suite"
 )
 

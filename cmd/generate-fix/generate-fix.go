@@ -12,8 +12,8 @@ import (
 	"sync"
 	"text/template"
 
-	"github.com/alpacahq/quickfix/cmd/generate-fix/internal"
-	"github.com/alpacahq/quickfix/datadictionary"
+	"github.com/cryptogarageinc/quickfix-go/cmd/generate-fix/internal"
+	"github.com/cryptogarageinc/quickfix-go/datadictionary"
 )
 
 var (

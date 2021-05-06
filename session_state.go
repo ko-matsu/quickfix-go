@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/alpacahq/quickfix/internal"
+	"github.com/cryptogarageinc/quickfix-go/internal"
 )
 
 type stateMachine struct {

@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	"github.com/armon/go-proxyproto"
-	"github.com/alpacahq/quickfix/config"
+	"github.com/cryptogarageinc/quickfix-go/config"
 )
 
 //Acceptor accepts connections from FIX clients and manages the associated sessions.

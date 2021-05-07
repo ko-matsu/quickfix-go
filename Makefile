@@ -1,24 +1,32 @@
 all: vet test
 
-generate:
-	mkdir -p gen; cd gen; go run ../cmd/generate-fix/generate-fix.go ../spec/*.xml
-	make generate_maps
+clean:
+	rm -rf gen
 
-generate_maps:
+generate: clean
+	mkdir -p gen; cd gen; go run ../cmd/generate-fix/generate-fix.go ../spec/*.xml
+
+generate_maps: generate
+	cd gen
 	$(if $(shell which stringer-augmented),,$(error "No stringer-augmented in PATH, install from gopaca))
 	cd enum && stringer-augmented -type `grep type enums.generated.go | awk '{print $$2}' | xargs | sed -e 's/ /,/g'` -sqlfile enums-generated-maps.sql -output enums.generated-reverse.go enums.generated.go
 
 generate-dist:
-	cd ..; go run quickfix/cmd/generate-fix/generate-fix.go quickfix/spec/*.xml
+	go run cmd/generate-fix/generate-fix.go spec/*.xml
+
+generate-dist-win:
+	go run cmd/generate-fix/generate-fix.go spec/FIX42.xml spec/FIX44.xml
 
 fmt:
 	go fmt `go list ./... | grep -v quickfix/gen`
 
 vet:
-	go vet `go list ./... | grep -v quickfix/gen`
+	go vet . ./config ./datadictionary ./enum ./field ./internal ./tag
+	go vet ./cmd/generate-fix ./cmd/generate-fix/internal
+	go vet ./_test
 
 lint:
-	go get github.com/golang/lint/golint
+	go get golang.org/x/lint/golint
 	golint .
 
 test: 

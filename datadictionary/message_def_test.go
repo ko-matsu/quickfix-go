@@ -3,7 +3,7 @@ package datadictionary_test
 import (
 	"testing"
 
-	"github.com/alpacahq/quickfix/datadictionary"
+	"github.com/cryptogarageinc/quickfix-go/datadictionary"
 	"github.com/stretchr/testify/assert"
 )
 

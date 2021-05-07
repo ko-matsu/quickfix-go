@@ -6,7 +6,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/alpacahq/quickfix/datadictionary"
+	"github.com/cryptogarageinc/quickfix-go/datadictionary"
 )
 
 //Header is first section of a FIX Message
@@ -112,6 +112,22 @@ func NewMessage() *Message {
 	m.Trailer.Init()
 
 	return m
+}
+
+// CopyInto erases the dest messages and copies the curreny message content
+// into it.
+func (m *Message) CopyInto(to *Message) {
+	m.Header.CopyInto(&to.Header.FieldMap)
+	m.Body.CopyInto(&to.Body.FieldMap)
+	m.Trailer.CopyInto(&to.Trailer.FieldMap)
+
+	to.ReceiveTime = m.ReceiveTime
+	to.bodyBytes = make([]byte, len(m.bodyBytes))
+	copy(to.bodyBytes, m.bodyBytes)
+	to.fields = make([]TagValue, len(m.fields))
+	for i := range to.fields {
+		to.fields[i].init(m.fields[i].tag, m.fields[i].value)
+	}
 }
 
 //ParseMessage constructs a Message from a byte slice wrapping a FIX message.

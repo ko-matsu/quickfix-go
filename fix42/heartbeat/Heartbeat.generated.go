@@ -1,10 +1,10 @@
 package heartbeat
 
 import (
-	"github.com/alpacahq/quickfix"
-	"github.com/alpacahq/quickfix/field"
-	"github.com/alpacahq/quickfix/fix42"
-	"github.com/alpacahq/quickfix/tag"
+	"github.com/cryptogarageinc/quickfix-go"
+	"github.com/cryptogarageinc/quickfix-go/field"
+	"github.com/cryptogarageinc/quickfix-go/fix42"
+	"github.com/cryptogarageinc/quickfix-go/tag"
 )
 
 //Heartbeat is the fix42 Heartbeat type, MsgType = 0

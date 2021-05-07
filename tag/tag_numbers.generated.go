@@ -1,7 +1,7 @@
 package tag
 
 import (
-	"github.com/alpacahq/quickfix"
+	"github.com/cryptogarageinc/quickfix-go"
 )
 
 const (

@@ -1,6 +1,6 @@
 package quickfix
 
-import "github.com/alpacahq/quickfix/internal"
+import "github.com/cryptogarageinc/quickfix-go/internal"
 
 type resendState struct {
 	loggedOn

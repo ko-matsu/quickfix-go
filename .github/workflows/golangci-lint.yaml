@@ -5,11 +5,16 @@ on:
       - v*
     branches:
       - master
+      - develop
   pull_request:
+    branches:
+      - master
+      - develop
+
 jobs:
   golangci:
     name: lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: golangci-lint
@@ -22,6 +27,7 @@ jobs:
           # working-directory: somedir
 
           # Optional: golangci-lint command line arguments.
+          args: --timeout=10m --skip-dirs=fix42,fix44 --exclude="Error return value of .(store.cache.*|suite.msgStore.*). is not checke"
           # args: --issues-exit-code=0
 
           # Optional: show only new issues if it's a pull request. The default value is `false`.

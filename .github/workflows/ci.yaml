@@ -6,24 +6,27 @@ on:
     branches:
       - master
       - main
+      - develop
   pull_request:
     branches:
       - master
       - main
+      - develop
 jobs:
   golangci:
     name: lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
           version: v1.41
+          args: --timeout=10m --skip-dirs=fix42,fix44 --exclude="Error return value of .(store.cache.*|suite.msgStore.*). is not checke"
 
   build:
     name: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         go: [1.16]

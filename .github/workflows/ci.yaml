@@ -31,15 +31,15 @@ jobs:
       matrix:
         go: [1.16]
         fix-version:
-          - FIX_TEST=
-          - FIX_TEST=fix40
-          - FIX_TEST=fix41
+#          - FIX_TEST=
+#          - FIX_TEST=fix40
+#          - FIX_TEST=fix41
           - FIX_TEST=fix42
-          - FIX_TEST=fix43
+#          - FIX_TEST=fix43
           - FIX_TEST=fix44
-          - FIX_TEST=fix50
-          - FIX_TEST=fix50sp1
-          - FIX_TEST=fix50sp2
+#          - FIX_TEST=fix50
+#          - FIX_TEST=fix50sp1
+#          - FIX_TEST=fix50sp2
     steps:
       - name: Setup
         uses: actions/setup-go@v2

@@ -38,6 +38,11 @@ _build_all:
 	cd fix42 && go build -v `go list ./...`
 	cd fix44 && go build -v `go list ./...`
 
+build_all_win: 
+	go build -v . ./config ./datadictionary ./enum ./field ./fix42 ./fix44 ./internal ./tag ./cmd/generate-fix ./cmd/generate-fix/internal
+	cd fix42; go build -v `go list ./...`
+	cd fix44; go build -v `go list ./...`
+
 build_accept: 
 	cd _test; go build -o echo_server
 

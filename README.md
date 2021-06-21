@@ -1,8 +1,6 @@
 QuickFIX/Go
 ===========
 
-[![GoDoc](https://godoc.org/github.com/alpacahq/quickfix?status.png)](https://godoc.org/github.com/alpacahq/quickfix) [![Build Status](https://travis-ci.org/quickfixgo/quickfix.svg?branch=master)](https://travis-ci.org/quickfixgo/quickfix) [![Go Report Card](https://goreportcard.com/badge/github.com/alpacahq/quickfix)](https://goreportcard.com/report/github.com/alpacahq/quickfix)
-
 - Website: http://www.quickfixgo.org
 - Mailing list: [Google Groups](https://groups.google.com/forum/#!forum/quickfixgo)
 

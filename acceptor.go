@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/tls"
+	"errors"
 	"io"
 	"net"
 	"runtime/debug"
@@ -378,4 +379,79 @@ LOOP:
 // 	a.SetConnectionValidator(nil)
 func (a *Acceptor) SetConnectionValidator(validator ConnectionValidator) {
 	a.connectionValidator = validator
+}
+
+// append API ------------------------------------------------------------------
+
+const (
+	// DoNotLoggedOnSessionMessage This message is use by SendToTarget.
+	DoNotLoggedOnSessionMessage = "session is not loggedOn"
+)
+
+var errDoNotLoggedOnSession = errors.New(DoNotLoggedOnSessionMessage)
+
+// GetSessionIdList This function returns managed all sessionID list.
+func (a *Acceptor) GetSessionIdList() []SessionID {
+	sessionIds := make([]SessionID, 0, len(a.sessions))
+	for sessionID := range a.sessions {
+		sessionIds = append(sessionIds, sessionID)
+	}
+	return sessionIds
+}
+
+// GetLoggedOnSessionIdList This function returns loggedOn sessionID list.
+func (a *Acceptor) GetLoggedOnSessionIdList() []SessionID {
+	sessionIds := make([]SessionID, 0, len(a.sessions))
+	for sessionID, session := range a.sessions {
+		if session.IsLoggedOn() {
+			sessionIds = append(sessionIds, sessionID)
+		}
+	}
+	return sessionIds
+}
+
+// SendToLiveSession This function send message for logged on session.
+func (a *Acceptor) SendToLiveSession(m Messagable, sessionID SessionID) error {
+	msg := m.ToMessage()
+	session, ok := a.sessions[sessionID]
+	if !ok {
+		return errUnknownSession
+	}
+	if !session.IsLoggedOn() {
+		return errDoNotLoggedOnSession
+	}
+	return session.queueForSend(msg)
+}
+
+// SendToLiveSessions This function send messages for logged on sessions.
+func (a *Acceptor) SendToLiveSessions(m Messagable) (errorSessionIDs *map[SessionID]error, firstErr error) {
+	sessionIds := make([]SessionID, 0, len(a.sessions))
+	sessions := make([]*session, 0, len(a.sessions))
+	for sessionID, targetSession := range a.sessions {
+		if targetSession.IsLoggedOn() {
+			sessionIds = append(sessionIds, sessionID)
+			sessions = append(sessions, targetSession)
+		}
+	}
+
+	errorMap := make(map[SessionID]error)
+	for index, targetSession := range sessions {
+		if !targetSession.IsLoggedOn() {
+			continue
+		}
+		msg := m.ToMessage()
+		if err := targetSession.queueForSend(msg); err != nil {
+			sessionId := sessionIds[index]
+			errorMap[sessionId] = err
+			if firstErr == nil {
+				firstErr = err
+				errorSessionIDs = &errorMap
+			}
+		}
+	}
+	if firstErr == nil {
+		return nil, nil
+	} else {
+		return errorSessionIDs, firstErr
+	}
 }

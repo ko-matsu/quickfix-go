@@ -200,3 +200,71 @@ func (i *Initiator) handleConnection(session *session, tlsConfig *tls.Config, di
 		}
 	}
 }
+
+// append API ------------------------------------------------------------------
+
+// GetSessionIdList This function returns managed all sessionID list.
+func (i *Initiator) GetSessionIdList() []SessionID {
+	sessionIds := make([]SessionID, 0, len(i.sessions))
+	for sessionID := range i.sessions {
+		sessionIds = append(sessionIds, sessionID)
+	}
+	return sessionIds
+}
+
+// GetLoggedOnSessionIdList This function returns loggedOn sessionID list.
+func (i *Initiator) GetLoggedOnSessionIdList() []SessionID {
+	sessionIds := make([]SessionID, 0, len(i.sessions))
+	for sessionID, session := range i.sessions {
+		if session.IsLoggedOn() {
+			sessionIds = append(sessionIds, sessionID)
+		}
+	}
+	return sessionIds
+}
+
+// SendToLiveSession This function send message for logged on session.
+func (i *Initiator) SendToLiveSession(m Messagable, sessionID SessionID) error {
+	msg := m.ToMessage()
+	session, ok := i.sessions[sessionID]
+	if !ok {
+		return errUnknownSession
+	}
+	if !session.IsLoggedOn() {
+		return errDoNotLoggedOnSession
+	}
+	return session.queueForSend(msg)
+}
+
+// SendToLiveSessions This function send messages for logged on sessions.
+func (i *Initiator) SendToLiveSessions(m Messagable) (errorSessionIDs *map[SessionID]error, firstErr error) {
+	sessionIds := make([]SessionID, 0, len(i.sessions))
+	sessions := make([]*session, 0, len(i.sessions))
+	for sessionID, targetSession := range i.sessions {
+		if targetSession.IsLoggedOn() {
+			sessionIds = append(sessionIds, sessionID)
+			sessions = append(sessions, targetSession)
+		}
+	}
+
+	errorMap := make(map[SessionID]error)
+	for index, targetSession := range sessions {
+		if !targetSession.IsLoggedOn() {
+			continue
+		}
+		msg := m.ToMessage()
+		if err := targetSession.queueForSend(msg); err != nil {
+			sessionId := sessionIds[index]
+			errorMap[sessionId] = err
+			if firstErr == nil {
+				firstErr = err
+				errorSessionIDs = &errorMap
+			}
+		}
+	}
+	if firstErr == nil {
+		return nil, nil
+	} else {
+		return errorSessionIDs, firstErr
+	}
+}

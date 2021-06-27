@@ -25,7 +25,8 @@ type session struct {
 	toSend [][]byte
 
 	//mutex for access to toSend
-	sendMutex sync.Mutex
+	sendMutex    sync.Mutex
+	connectMutex sync.Mutex
 
 	sessionEvent chan internal.Event
 	messageEvent chan bool

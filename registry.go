@@ -82,3 +82,30 @@ func lookupSession(sessionID SessionID) (s *session, ok bool) {
 	s, ok = sessions[sessionID]
 	return
 }
+
+// append API ------------------------------------------------------------------
+
+func fillHeaderBySessionID(m *Message, sessionID SessionID) *Message {
+	if sessionID.BeginString != "" {
+		m.Header.SetField(tagBeginString, FIXString(sessionID.BeginString))
+	}
+	if sessionID.SenderCompID != "" {
+		m.Header.SetField(tagSenderCompID, FIXString(sessionID.SenderCompID))
+	}
+	if sessionID.TargetCompID != "" {
+		m.Header.SetField(tagTargetCompID, FIXString(sessionID.TargetCompID))
+	}
+	if sessionID.SenderSubID != "" {
+		m.Header.SetField(tagSenderSubID, FIXString(sessionID.SenderSubID))
+	}
+	if sessionID.SenderLocationID != "" {
+		m.Header.SetField(tagSenderLocationID, FIXString(sessionID.SenderLocationID))
+	}
+	if sessionID.TargetSubID != "" {
+		m.Header.SetField(tagTargetSubID, FIXString(sessionID.TargetSubID))
+	}
+	if sessionID.TargetLocationID != "" {
+		m.Header.SetField(tagTargetLocationID, FIXString(sessionID.TargetLocationID))
+	}
+	return m
+}

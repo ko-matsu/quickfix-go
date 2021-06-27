@@ -296,6 +296,8 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 		a.dynamicQualifierCount++
 		sessID.Qualifier = strconv.Itoa(a.dynamicQualifierCount)
 	}
+
+	var connectMutex *sync.Mutex
 	a.sessionMutex.RLock()
 	session, ok := a.allSessions[sessID]
 	a.sessionMutex.RUnlock()
@@ -309,6 +311,9 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 			a.globalLog.OnEventf("Dynamic session %v failed to create: %v", sessID, err)
 			return
 		}
+
+		dynamicSession.connectMutex.Lock()
+
 		a.dynamicSessionChan <- dynamicSession
 		session = dynamicSession
 		a.sessionMutex.Lock()
@@ -320,7 +325,15 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 			a.sessionMutex.Unlock()
 			session.stop()
 		}()
+	} else {
+		session.connectMutex.Lock()
 	}
+	connectMutex = &session.connectMutex
+	defer func() {
+		if connectMutex != nil {
+			connectMutex.Unlock()
+		}
+	}()
 
 	a.addressMutex.Lock()
 	a.sessionAddr[sessID] = netConn.RemoteAddr()
@@ -332,6 +345,7 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 		a.globalLog.OnEventf("Unable to accept %v", err.Error())
 		return
 	}
+	connectMutex = nil
 
 	go func() {
 		msgIn <- fixIn{msgBytes, parser.lastRead}

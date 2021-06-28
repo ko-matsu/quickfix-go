@@ -5,6 +5,7 @@ clean:
 
 generate: clean
 	mkdir -p gen; cd gen; go run ../cmd/generate-fix/generate-fix.go ../spec/*.xml
+#	go get -u all 
 
 generate_maps: generate
 	cd gen
@@ -33,7 +34,14 @@ test:
 	go test -v -cover . ./datadictionary ./internal
 
 _build_all: 
-	go build -v `go list ./...`
+	go build -v . ./config ./datadictionary ./enum ./field ./fix42 ./fix44 ./internal ./tag ./cmd/generate-fix ./cmd/generate-fix/internal
+	cd fix42 && go build -v `go list ./...`
+	cd fix44 && go build -v `go list ./...`
+
+build_all_win: 
+	go build -v . ./config ./datadictionary ./enum ./field ./fix42 ./fix44 ./internal ./tag ./cmd/generate-fix ./cmd/generate-fix/internal
+	cd fix42; go build -v `go list ./...`
+	cd fix44; go build -v `go list ./...`
 
 build_accept: 
 	cd _test; go build -o echo_server
@@ -57,7 +65,8 @@ fix50sp1:
 fix50sp2:
 	cd _test; ./runat.sh $@.cfg 5008 "definitions/server/$@/*.def"
 
-ACCEPT_SUITE=fix40 fix41 fix42 fix43 fix44 fix50 fix50sp1 fix50sp2 
+#ACCEPT_SUITE=fix40 fix41 fix42 fix43 fix44 fix50 fix50sp1 fix50sp2 
+ACCEPT_SUITE=fix42 fix44
 accept: $(ACCEPT_SUITE)
 
 .PHONY: test $(ACCEPT_SUITE)

@@ -69,9 +69,23 @@ class ReflectorClient
     def @reflector.waitDisconnectAction(cid)
       socket = @sockets[cid]
       if IO.select([socket], nil, nil, 10) == nil then 
-	    raise "Connection hangs after ten seconds."
-      elsif !socket.eof? then
-	    raise "Expected disconnection, got data"
+        raise "Connection hangs after ten seconds."
+      elsif socket.closed? then
+        print "Already closed."
+      else
+        isEof = true
+        begin
+          isEof = socket.eof?
+        rescue => e
+          if e.message =~ /^An established connection was aborted by the software in your host machine/ then
+            print "connection check error.\n"
+          else
+            raise e
+          end
+        end
+        if !isEof then
+          raise "Expected disconnection, got data"
+        end
       end
     end
 

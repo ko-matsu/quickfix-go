@@ -428,25 +428,36 @@ var errDoNotLoggedOnSession = errors.New(DoNotLoggedOnSessionMessage)
 // GetSessionIdList This function returns managed all sessionID list.
 func (a *Acceptor) GetSessionIdList() []SessionID {
 	a.sessionMutex.RLock()
+	defer a.sessionMutex.RUnlock()
 	sessionIds := make([]SessionID, 0, len(a.allSessions))
 	for sessionID := range a.allSessions {
 		sessionIds = append(sessionIds, sessionID)
 	}
-	a.sessionMutex.RUnlock()
 	return sessionIds
 }
 
 // GetLoggedOnSessionIdList This function returns loggedOn sessionID list.
 func (a *Acceptor) GetLoggedOnSessionIdList() []SessionID {
 	a.sessionMutex.RLock()
+	defer a.sessionMutex.RUnlock()
 	sessionIds := make([]SessionID, 0, len(a.allSessions))
 	for sessionID, session := range a.allSessions {
 		if session.IsLoggedOn() {
 			sessionIds = append(sessionIds, sessionID)
 		}
 	}
-	a.sessionMutex.RUnlock()
 	return sessionIds
+}
+
+// IsLiveSession This function checks if the session is a logged on session or not.
+func (a *Acceptor) IsLiveSession(sessionID SessionID) bool {
+	a.sessionMutex.RLock()
+	defer a.sessionMutex.RUnlock()
+	session, ok := a.allSessions[sessionID]
+	if ok && session.IsLoggedOn() {
+		return true
+	}
+	return false
 }
 
 // SendToLiveSession This function send message for logged on session.

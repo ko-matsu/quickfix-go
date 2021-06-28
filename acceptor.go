@@ -483,8 +483,10 @@ func (a *Acceptor) SendToLiveSessions(m Messagable) (errorSessionIDs *map[Sessio
 			continue
 		}
 		msg := m.ToMessage()
+		sessionId := sessionIds[index]
+		msg = fillHeaderBySessionID(msg, sessionId)
+
 		if err := targetSession.queueForSend(msg); err != nil {
-			sessionId := sessionIds[index]
 			errorMap[sessionId] = err
 			if firstErr == nil {
 				firstErr = err

@@ -241,7 +241,7 @@ func (i *Initiator) SendToAliveSession(m Messagable, sessionID SessionID) error 
 func (i *Initiator) SendToAliveSessions(m Messagable) (err error) {
 	sessionIDs := i.GetAliveSessionIDs()
 
-	errorByID := ErrorBySessionID{}
+	errorByID := ErrorBySessionID{ErrorMap: make(map[SessionID]error)}
 	baseMsg := m.ToMessage()
 	for _, sessionID := range sessionIDs {
 		msg := NewMessage()

@@ -141,7 +141,7 @@ func SendToAliveSession(m Messagable, sessionID SessionID) (err error) {
 func SendToAliveSessions(m Messagable) (err error) {
 	sessionIDs := GetAliveSessionIDs()
 
-	errorByID := ErrorBySessionID{}
+	errorByID := ErrorBySessionID{ErrorMap: make(map[SessionID]error)}
 	baseMsg := m.ToMessage()
 	for _, sessionID := range sessionIDs {
 		msg := NewMessage()

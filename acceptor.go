@@ -418,15 +418,8 @@ func (a *Acceptor) SetConnectionValidator(validator ConnectionValidator) {
 
 // append API ------------------------------------------------------------------
 
-const (
-	// DoNotLoggedOnSessionMessage This message is use by SendToTarget.
-	DoNotLoggedOnSessionMessage = "session is not loggedOn"
-)
-
-var errDoNotLoggedOnSession = errors.New(DoNotLoggedOnSessionMessage)
-
-// GetSessionIdList This function returns managed all sessionID list.
-func (a *Acceptor) GetSessionIdList() []SessionID {
+// GetSessionIDs This function returns managed all sessionID list.
+func (a *Acceptor) GetSessionIDs() []SessionID {
 	a.sessionMutex.RLock()
 	defer a.sessionMutex.RUnlock()
 	sessionIds := make([]SessionID, 0, len(a.allSessions))
@@ -436,8 +429,8 @@ func (a *Acceptor) GetSessionIdList() []SessionID {
 	return sessionIds
 }
 
-// GetLoggedOnSessionIdList This function returns loggedOn sessionID list.
-func (a *Acceptor) GetLoggedOnSessionIdList() []SessionID {
+// GetAliveSessionIDs This function returns loggedOn sessionID list.
+func (a *Acceptor) GetAliveSessionIDs() []SessionID {
 	a.sessionMutex.RLock()
 	defer a.sessionMutex.RUnlock()
 	sessionIds := make([]SessionID, 0, len(a.allSessions))
@@ -449,25 +442,25 @@ func (a *Acceptor) GetLoggedOnSessionIdList() []SessionID {
 	return sessionIds
 }
 
-// IsLiveSession This function checks if the session is a logged on session or not.
-func (a *Acceptor) IsLiveSession(sessionID SessionID) bool {
+// IsAliveSession This function checks if the session is a logged on session or not.
+func (a *Acceptor) IsAliveSession(sessionID SessionID) bool {
 	a.sessionMutex.RLock()
 	defer a.sessionMutex.RUnlock()
 	session, ok := a.allSessions[sessionID]
-	if ok && session.IsLoggedOn() {
-		return true
+	if ok {
+		return session.IsLoggedOn()
 	}
 	return false
 }
 
-// SendToLiveSession This function send message for logged on session.
-func (a *Acceptor) SendToLiveSession(m Messagable, sessionID SessionID) error {
+// SendToAliveSession This function send message for logged on session.
+func (a *Acceptor) SendToAliveSession(m Messagable, sessionID SessionID) error {
 	msg := m.ToMessage()
 	a.sessionMutex.RLock()
 	session, ok := a.allSessions[sessionID]
 	a.sessionMutex.RUnlock()
 	if !ok {
-		return errUnknownSession
+		return errDoNotLoggedOnSession
 	}
 	if !session.IsLoggedOn() {
 		return errDoNotLoggedOnSession
@@ -475,39 +468,20 @@ func (a *Acceptor) SendToLiveSession(m Messagable, sessionID SessionID) error {
 	return session.queueForSend(msg)
 }
 
-// SendToLiveSessions This function send messages for logged on sessions.
-func (a *Acceptor) SendToLiveSessions(m Messagable) (errorSessionIDs *map[SessionID]error, firstErr error) {
-	a.sessionMutex.RLock()
-	sessionIds := make([]SessionID, 0, len(a.allSessions))
-	sessions := make([]*session, 0, len(a.allSessions))
-	for sessionID, targetSession := range a.allSessions {
-		if targetSession.IsLoggedOn() {
-			sessionIds = append(sessionIds, sessionID)
-			sessions = append(sessions, targetSession)
-		}
-	}
-	a.sessionMutex.RUnlock()
+// SendToAliveSessions This function send messages for logged on sessions.
+func (a *Acceptor) SendToAliveSessions(m Messagable) (err error) {
+	sessionIDs := a.GetAliveSessionIDs()
 
-	errorMap := make(map[SessionID]error)
-	for index, targetSession := range sessions {
-		if !targetSession.IsLoggedOn() {
-			continue
-		}
+	errorByID := ErrorBySessionID{}
+	for _, sessionID := range sessionIDs {
 		msg := m.ToMessage()
-		sessionId := sessionIds[index]
-		msg = fillHeaderBySessionID(msg, sessionId)
-
-		if err := targetSession.queueForSend(msg); err != nil {
-			errorMap[sessionId] = err
-			if firstErr == nil {
-				firstErr = err
-				errorSessionIDs = &errorMap
-			}
+		msg = fillHeaderBySessionID(msg, sessionID)
+		tmpErr := a.SendToAliveSession(msg, sessionID)
+		errorByID.ErrorMap[sessionID] = tmpErr
+		if (tmpErr != nil) && (errorByID.error == nil) {
+			err = &errorByID
+			errorByID.error = errors.New("failed to SendToAliveSessions")
 		}
 	}
-	if firstErr == nil {
-		return nil, nil
-	} else {
-		return errorSessionIDs, firstErr
-	}
+	return err
 }

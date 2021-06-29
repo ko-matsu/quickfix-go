@@ -3,6 +3,7 @@ package quickfix
 import (
 	"bufio"
 	"crypto/tls"
+	"errors"
 	"strings"
 	"sync"
 	"time"
@@ -203,17 +204,8 @@ func (i *Initiator) handleConnection(session *session, tlsConfig *tls.Config, di
 
 // append API ------------------------------------------------------------------
 
-// GetSessionIdList This function returns managed all sessionID list.
-func (i *Initiator) GetSessionIdList() []SessionID {
-	sessionIds := make([]SessionID, 0, len(i.sessions))
-	for sessionID := range i.sessions {
-		sessionIds = append(sessionIds, sessionID)
-	}
-	return sessionIds
-}
-
-// GetLoggedOnSessionIdList This function returns loggedOn sessionID list.
-func (i *Initiator) GetLoggedOnSessionIdList() []SessionID {
+// GetAliveSessionIDs This function returns loggedOn sessionID list.
+func (i *Initiator) GetAliveSessionIDs() []SessionID {
 	sessionIds := make([]SessionID, 0, len(i.sessions))
 	for sessionID, session := range i.sessions {
 		if session.IsLoggedOn() {
@@ -223,12 +215,21 @@ func (i *Initiator) GetLoggedOnSessionIdList() []SessionID {
 	return sessionIds
 }
 
-// SendToLiveSession This function send message for logged on session.
-func (i *Initiator) SendToLiveSession(m Messagable, sessionID SessionID) error {
+// IsAliveSession This function checks if the session is a logged on session or not.
+func (i *Initiator) IsAliveSession(sessionID SessionID) bool {
+	session, ok := i.sessions[sessionID]
+	if ok {
+		return session.IsLoggedOn()
+	}
+	return false
+}
+
+// SendToAliveSession This function send message for logged on session.
+func (i *Initiator) SendToAliveSession(m Messagable, sessionID SessionID) error {
 	msg := m.ToMessage()
 	session, ok := i.sessions[sessionID]
 	if !ok {
-		return errUnknownSession
+		return errDoNotLoggedOnSession
 	}
 	if !session.IsLoggedOn() {
 		return errDoNotLoggedOnSession
@@ -236,38 +237,20 @@ func (i *Initiator) SendToLiveSession(m Messagable, sessionID SessionID) error {
 	return session.queueForSend(msg)
 }
 
-// SendToLiveSessions This function send messages for logged on sessions.
-func (i *Initiator) SendToLiveSessions(m Messagable) (errorSessionIDs *map[SessionID]error, firstErr error) {
-	sessionIds := make([]SessionID, 0, len(i.sessions))
-	sessions := make([]*session, 0, len(i.sessions))
-	for sessionID, targetSession := range i.sessions {
-		if targetSession.IsLoggedOn() {
-			sessionIds = append(sessionIds, sessionID)
-			sessions = append(sessions, targetSession)
-		}
-	}
+// SendToAliveSessions This function send messages for logged on sessions.
+func (i *Initiator) SendToAliveSessions(m Messagable) (err error) {
+	sessionIDs := i.GetAliveSessionIDs()
 
-	errorMap := make(map[SessionID]error)
-	for index, targetSession := range sessions {
-		if !targetSession.IsLoggedOn() {
-			continue
-		}
+	errorByID := ErrorBySessionID{}
+	for _, sessionID := range sessionIDs {
 		msg := m.ToMessage()
-		sessionId := sessionIds[index]
-		msg = fillHeaderBySessionID(msg, sessionId)
-
-		if err := targetSession.queueForSend(msg); err != nil {
-			sessionId := sessionIds[index]
-			errorMap[sessionId] = err
-			if firstErr == nil {
-				firstErr = err
-				errorSessionIDs = &errorMap
-			}
+		msg = fillHeaderBySessionID(msg, sessionID)
+		tmpErr := i.SendToAliveSession(msg, sessionID)
+		errorByID.ErrorMap[sessionID] = tmpErr
+		if (tmpErr != nil) && (errorByID.error == nil) {
+			err = &errorByID
+			errorByID.error = errors.New("failed to SendToAliveSessions")
 		}
 	}
-	if firstErr == nil {
-		return nil, nil
-	} else {
-		return errorSessionIDs, firstErr
-	}
+	return err
 }

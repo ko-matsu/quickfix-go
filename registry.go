@@ -85,6 +85,76 @@ func lookupSession(sessionID SessionID) (s *session, ok bool) {
 
 // append API ------------------------------------------------------------------
 
+const (
+	// DoNotLoggedOnSessionMessage This message is use by SendToTarget.
+	DoNotLoggedOnSessionMessage = "session is not loggedOn"
+)
+
+var errDoNotLoggedOnSession = errors.New(DoNotLoggedOnSessionMessage)
+
+// ErrorBySessionID This struct has error map by sessionID.
+type ErrorBySessionID struct {
+	error
+	ErrorMap map[SessionID]error
+}
+
+// Error This function returns error string.
+func (e *ErrorBySessionID) Error() string {
+	return e.error.Error()
+}
+
+// GetAliveSessionIDs This function returns loggedOn sessionID list.
+func GetAliveSessionIDs() []SessionID {
+	sessionsLock.Lock()
+	defer sessionsLock.Unlock()
+	sessionIds := make([]SessionID, 0, len(sessions))
+	for sessionID, session := range sessions {
+		if session.IsLoggedOn() {
+			sessionIds = append(sessionIds, sessionID)
+		}
+	}
+	return sessionIds
+}
+
+// IsAliveSession This function checks if the session is a logged on session or not.
+func IsAliveSession(sessionID SessionID) bool {
+	sessionsLock.Lock()
+	defer sessionsLock.Unlock()
+	session, ok := sessions[sessionID]
+	if ok {
+		return session.IsLoggedOn()
+	}
+	return false
+}
+
+// SendToAliveSession This function send message for logged on session.
+func SendToAliveSession(m Messagable, sessionID SessionID) (err error) {
+	if !IsAliveSession(sessionID) {
+		err = errDoNotLoggedOnSession
+	} else {
+		err = SendToTarget(m, sessionID)
+	}
+	return err
+}
+
+// SendToAliveSessions This function send messages for logged on sessions.
+func SendToAliveSessions(m Messagable) (err error) {
+	sessionIDs := GetAliveSessionIDs()
+
+	errorByID := ErrorBySessionID{}
+	for _, sessionID := range sessionIDs {
+		msg := m.ToMessage()
+		msg = fillHeaderBySessionID(msg, sessionID)
+		tmpErr := SendToAliveSession(msg, sessionID)
+		errorByID.ErrorMap[sessionID] = tmpErr
+		if (tmpErr != nil) && (errorByID.error == nil) {
+			err = &errorByID
+			errorByID.error = errors.New("failed to SendToAliveSessions")
+		}
+	}
+	return err
+}
+
 func fillHeaderBySessionID(m *Message, sessionID SessionID) *Message {
 	if sessionID.BeginString != "" {
 		m.Header.SetField(tagBeginString, FIXString(sessionID.BeginString))
@@ -107,5 +177,6 @@ func fillHeaderBySessionID(m *Message, sessionID SessionID) *Message {
 	if sessionID.TargetLocationID != "" {
 		m.Header.SetField(tagTargetLocationID, FIXString(sessionID.TargetLocationID))
 	}
+	m.Header.Clear()
 	return m
 }

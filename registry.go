@@ -149,7 +149,6 @@ func SendToAliveSessions(m Messagable) (err error) {
 	return err
 }
 
-// SendToSessions This function send messages for logged on sessions.
 func sendToSessions(m Messagable, sessionIDs []SessionID) (err error) {
 	errorByID := ErrorBySessionID{ErrorMap: make(map[SessionID]error)}
 	baseMsg := m.ToMessage()

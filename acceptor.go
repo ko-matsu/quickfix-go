@@ -460,10 +460,10 @@ func (a *Acceptor) SendToAliveSession(m Messagable, sessionID SessionID) error {
 	session, ok := a.allSessions[sessionID]
 	a.sessionMutex.RUnlock()
 	if !ok {
-		return errDoNotLoggedOnSession
+		return ErrDoNotLoggedOnSession
 	}
 	if !session.IsLoggedOn() {
-		return errDoNotLoggedOnSession
+		return ErrDoNotLoggedOnSession
 	}
 	return session.queueForSend(msg)
 }

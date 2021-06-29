@@ -87,10 +87,10 @@ func lookupSession(sessionID SessionID) (s *session, ok bool) {
 
 const (
 	// DoNotLoggedOnSessionMessage This message is use by SendToTarget.
-	DoNotLoggedOnSessionMessage = "session is not loggedOn"
+	doNotLoggedOnSessionMessage = "session is not loggedOn"
 )
 
-var errDoNotLoggedOnSession = errors.New(DoNotLoggedOnSessionMessage)
+var ErrDoNotLoggedOnSession = errors.New(doNotLoggedOnSessionMessage)
 
 // ErrorBySessionID This struct has error map by sessionID.
 type ErrorBySessionID struct {
@@ -102,11 +102,6 @@ type ErrorBySessionID struct {
 func NewErrorBySessionID(err error) (response *ErrorBySessionID) {
 	response = &ErrorBySessionID{error: err, ErrorMap: make(map[SessionID]error)}
 	return response
-}
-
-// Error This function returns error string.
-func (e *ErrorBySessionID) Error() string {
-	return e.error.Error()
 }
 
 // GetAliveSessionIDs This function returns loggedOn sessionID list.
@@ -136,7 +131,7 @@ func IsAliveSession(sessionID SessionID) bool {
 // SendToAliveSession This function send message for logged on session.
 func SendToAliveSession(m Messagable, sessionID SessionID) (err error) {
 	if !IsAliveSession(sessionID) {
-		err = errDoNotLoggedOnSession
+		err = ErrDoNotLoggedOnSession
 	} else {
 		err = SendToTarget(m, sessionID)
 	}

@@ -229,10 +229,10 @@ func (i *Initiator) SendToAliveSession(m Messagable, sessionID SessionID) error 
 	msg := m.ToMessage()
 	session, ok := i.sessions[sessionID]
 	if !ok {
-		return errDoNotLoggedOnSession
+		return ErrDoNotLoggedOnSession
 	}
 	if !session.IsLoggedOn() {
-		return errDoNotLoggedOnSession
+		return ErrDoNotLoggedOnSession
 	}
 	return session.queueForSend(msg)
 }

@@ -98,6 +98,12 @@ type ErrorBySessionID struct {
 	ErrorMap map[SessionID]error
 }
 
+// NewErrorBySessionID This function returns NewErrorBySessionID object.
+func NewErrorBySessionID(err error) (response *ErrorBySessionID) {
+	response = &ErrorBySessionID{error: err, ErrorMap: make(map[SessionID]error)}
+	return response
+}
+
 // Error This function returns error string.
 func (e *ErrorBySessionID) Error() string {
 	return e.error.Error()
@@ -146,12 +152,6 @@ func SendToAliveSessions(m Messagable) (err error) {
 	for _, sessionID := range sessionIDs {
 		msg := NewMessage()
 		baseMsg.CopyInto(msg)
-		var msgType FIXString
-		if tmpErr := baseMsg.Header.GetField(tagMsgType, &msgType); tmpErr != nil {
-			errorByID.ErrorMap[sessionID] = tmpErr
-			continue
-		}
-		msg.Header.SetField(tagMsgType, msgType)
 		msg = fillHeaderBySessionID(msg, sessionID)
 		tmpErr := SendToAliveSession(msg, sessionID)
 		if tmpErr != nil {
@@ -187,6 +187,5 @@ func fillHeaderBySessionID(m *Message, sessionID SessionID) *Message {
 	if sessionID.TargetLocationID != "" {
 		m.Header.SetField(tagTargetLocationID, FIXString(sessionID.TargetLocationID))
 	}
-	m.Header.Clear()
 	return m
 }

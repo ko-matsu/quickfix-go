@@ -141,7 +141,16 @@ func SendToAliveSession(m Messagable, sessionID SessionID) (err error) {
 // SendToAliveSessions This function send messages for logged on sessions.
 func SendToAliveSessions(m Messagable) (err error) {
 	sessionIDs := GetAliveSessionIDs()
+	err = sendToSessions(m, sessionIDs)
+	if err != nil {
+		errObj := err.(*ErrorBySessionID)
+		errObj.error = errors.New("failed to SendToAliveSessions")
+	}
+	return err
+}
 
+// SendToSessions This function send messages for logged on sessions.
+func sendToSessions(m Messagable, sessionIDs []SessionID) (err error) {
 	errorByID := ErrorBySessionID{ErrorMap: make(map[SessionID]error)}
 	baseMsg := m.ToMessage()
 	for _, sessionID := range sessionIDs {
@@ -155,7 +164,7 @@ func SendToAliveSessions(m Messagable) (err error) {
 	}
 	if len(errorByID.ErrorMap) > 0 {
 		err = &errorByID
-		errorByID.error = errors.New("failed to SendToAliveSessions")
+		errorByID.error = errors.New("failed to SendToSessions")
 	}
 	return err
 }

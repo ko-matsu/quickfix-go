@@ -479,11 +479,13 @@ func (a *Acceptor) SendToAliveSessions(m Messagable) (err error) {
 		baseMsg.CopyInto(msg)
 		msg = fillHeaderBySessionID(msg, sessionID)
 		tmpErr := a.SendToAliveSession(msg, sessionID)
-		errorByID.ErrorMap[sessionID] = tmpErr
-		if (tmpErr != nil) && (errorByID.error == nil) {
-			err = &errorByID
-			errorByID.error = errors.New("failed to SendToAliveSessions")
+		if tmpErr != nil {
+			errorByID.ErrorMap[sessionID] = tmpErr
 		}
+	}
+	if len(errorByID.ErrorMap) > 0 {
+		err = &errorByID
+		errorByID.error = errors.New("failed to SendToAliveSessions")
 	}
 	return err
 }

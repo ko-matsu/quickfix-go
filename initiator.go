@@ -225,36 +225,22 @@ func (i *Initiator) IsAliveSession(sessionID SessionID) bool {
 }
 
 // SendToAliveSession This function send message for logged on session.
-func (i *Initiator) SendToAliveSession(m Messagable, sessionID SessionID) error {
-	msg := m.ToMessage()
-	session, ok := i.sessions[sessionID]
-	if !ok {
-		return ErrDoNotLoggedOnSession
+func (i *Initiator) SendToAliveSession(m Messagable, sessionID SessionID) (err error) {
+	if !i.IsAliveSession(sessionID) {
+		err = ErrDoNotLoggedOnSession
+	} else {
+		err = SendToAliveSession(m, sessionID)
 	}
-	if !session.IsLoggedOn() {
-		return ErrDoNotLoggedOnSession
-	}
-	return session.queueForSend(msg)
+	return err
 }
 
 // SendToAliveSessions This function send messages for logged on sessions.
 func (i *Initiator) SendToAliveSessions(m Messagable) (err error) {
 	sessionIDs := i.GetAliveSessionIDs()
-
-	errorByID := ErrorBySessionID{ErrorMap: make(map[SessionID]error)}
-	baseMsg := m.ToMessage()
-	for _, sessionID := range sessionIDs {
-		msg := NewMessage()
-		baseMsg.CopyInto(msg)
-		msg = fillHeaderBySessionID(msg, sessionID)
-		tmpErr := i.SendToAliveSession(msg, sessionID)
-		if tmpErr != nil {
-			errorByID.ErrorMap[sessionID] = tmpErr
-		}
-	}
-	if len(errorByID.ErrorMap) > 0 {
-		err = &errorByID
-		errorByID.error = errors.New("failed to SendToAliveSessions")
+	err = sendToSessions(m, sessionIDs)
+	if err != nil {
+		errObj := err.(*ErrorBySessionID)
+		errObj.error = errors.New("failed to SendToAliveSessions")
 	}
 	return err
 }

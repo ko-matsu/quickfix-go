@@ -17,7 +17,6 @@ import (
 
 //Acceptor accepts connections from FIX clients and manages the associated sessions.
 type Acceptor struct {
-	sessionMutex          sync.RWMutex
 	addressMutex          sync.RWMutex
 	app                   Application
 	settings              *Settings
@@ -32,7 +31,6 @@ type Acceptor struct {
 	dynamicQualifier      bool
 	dynamicQualifierCount int
 	dynamicSessionChan    chan *session
-	allSessions           map[SessionID]*session
 	sessionAddr           map[SessionID]net.Addr
 	connectionValidator   ConnectionValidator
 	sessionFactory
@@ -144,7 +142,6 @@ func NewAcceptor(app Application, storeFactory MessageStoreFactory, settings *Se
 		logFactory:   logFactory,
 		sessions:     make(map[SessionID]*session),
 		sessionAddr:  make(map[SessionID]net.Addr),
-		allSessions:  make(map[SessionID]*session),
 	}
 	if a.settings.GlobalSettings().HasSetting(config.DynamicSessions) {
 		if a.dynamicSessions, err = settings.globalSettings.BoolSetting(config.DynamicSessions); err != nil {
@@ -173,7 +170,7 @@ func NewAcceptor(app Application, storeFactory MessageStoreFactory, settings *Se
 		if a.sessions[sessID], err = a.createSession(sessionID, storeFactory, sessionSettings, logFactory, app); err != nil {
 			return
 		}
-		a.allSessions[sessID] = a.sessions[sessID]
+		a.sessions[sessID].linkedAcceptor = a
 	}
 
 	return
@@ -298,9 +295,7 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 	}
 
 	var connectMutex *sync.Mutex
-	a.sessionMutex.RLock()
-	session, ok := a.allSessions[sessID]
-	a.sessionMutex.RUnlock()
+	session, ok := a.sessions[sessID]
 	if !ok {
 		if !a.dynamicSessions {
 			a.globalLog.OnEventf("Session %v not found for incoming message: %s", sessID, msgBytes)
@@ -311,29 +306,20 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 			a.globalLog.OnEventf("Dynamic session %v failed to create: %v", sessID, err)
 			return
 		}
-
-		dynamicSession.connectMutex.Lock()
+		dynamicSession.linkedAcceptor = a
 
 		a.dynamicSessionChan <- dynamicSession
 		session = dynamicSession
-		a.sessionMutex.Lock()
-		a.allSessions[sessID] = session
-		a.sessionMutex.Unlock()
-		defer func() {
-			a.sessionMutex.Lock()
-			delete(a.allSessions, sessID)
-			a.sessionMutex.Unlock()
-			session.stop()
-		}()
+		defer session.stop()
 	} else {
 		session.connectMutex.Lock()
+		connectMutex = &session.connectMutex
+		defer func() {
+			if connectMutex != nil {
+				connectMutex.Unlock()
+			}
+		}()
 	}
-	connectMutex = &session.connectMutex
-	defer func() {
-		if connectMutex != nil {
-			connectMutex.Unlock()
-		}
-	}()
 
 	a.addressMutex.Lock()
 	a.sessionAddr[sessID] = netConn.RemoteAddr()
@@ -420,22 +406,24 @@ func (a *Acceptor) SetConnectionValidator(validator ConnectionValidator) {
 
 // GetSessionIDs This function returns managed all sessionID list.
 func (a *Acceptor) GetSessionIDs() []SessionID {
-	a.sessionMutex.RLock()
-	defer a.sessionMutex.RUnlock()
-	sessionIds := make([]SessionID, 0, len(a.allSessions))
-	for sessionID := range a.allSessions {
-		sessionIds = append(sessionIds, sessionID)
+	sessionsLock.RLock()
+	defer sessionsLock.RUnlock()
+	sessionIds := make([]SessionID, 0, len(a.sessions))
+	for sessionID, session := range sessions {
+		if session.linkedAcceptor == a {
+			sessionIds = append(sessionIds, sessionID)
+		}
 	}
 	return sessionIds
 }
 
 // GetAliveSessionIDs This function returns loggedOn sessionID list.
 func (a *Acceptor) GetAliveSessionIDs() []SessionID {
-	a.sessionMutex.RLock()
-	defer a.sessionMutex.RUnlock()
-	sessionIds := make([]SessionID, 0, len(a.allSessions))
-	for sessionID, session := range a.allSessions {
-		if session.IsLoggedOn() {
+	sessionsLock.RLock()
+	defer sessionsLock.RUnlock()
+	sessionIds := make([]SessionID, 0, len(a.sessions))
+	for sessionID, session := range sessions {
+		if (session.linkedAcceptor == a) && session.IsLoggedOn() {
 			sessionIds = append(sessionIds, sessionID)
 		}
 	}
@@ -444,48 +432,32 @@ func (a *Acceptor) GetAliveSessionIDs() []SessionID {
 
 // IsAliveSession This function checks if the session is a logged on session or not.
 func (a *Acceptor) IsAliveSession(sessionID SessionID) bool {
-	a.sessionMutex.RLock()
-	defer a.sessionMutex.RUnlock()
-	session, ok := a.allSessions[sessionID]
-	if ok {
+	sessionsLock.RLock()
+	defer sessionsLock.RUnlock()
+	session, ok := sessions[sessionID]
+	if ok && (session.linkedAcceptor == a) {
 		return session.IsLoggedOn()
 	}
 	return false
 }
 
 // SendToAliveSession This function send message for logged on session.
-func (a *Acceptor) SendToAliveSession(m Messagable, sessionID SessionID) error {
-	msg := m.ToMessage()
-	a.sessionMutex.RLock()
-	session, ok := a.allSessions[sessionID]
-	a.sessionMutex.RUnlock()
-	if !ok {
-		return ErrDoNotLoggedOnSession
+func (a *Acceptor) SendToAliveSession(m Messagable, sessionID SessionID) (err error) {
+	if !a.IsAliveSession(sessionID) {
+		err = ErrDoNotLoggedOnSession
+	} else {
+		err = SendToAliveSession(m, sessionID)
 	}
-	if !session.IsLoggedOn() {
-		return ErrDoNotLoggedOnSession
-	}
-	return session.queueForSend(msg)
+	return err
 }
 
 // SendToAliveSessions This function send messages for logged on sessions.
 func (a *Acceptor) SendToAliveSessions(m Messagable) (err error) {
 	sessionIDs := a.GetAliveSessionIDs()
-
-	errorByID := ErrorBySessionID{ErrorMap: make(map[SessionID]error)}
-	baseMsg := m.ToMessage()
-	for _, sessionID := range sessionIDs {
-		msg := NewMessage()
-		baseMsg.CopyInto(msg)
-		msg = fillHeaderBySessionID(msg, sessionID)
-		tmpErr := a.SendToAliveSession(msg, sessionID)
-		if tmpErr != nil {
-			errorByID.ErrorMap[sessionID] = tmpErr
-		}
-	}
-	if len(errorByID.ErrorMap) > 0 {
-		err = &errorByID
-		errorByID.error = errors.New("failed to SendToAliveSessions")
+	err = sendToSessions(m, sessionIDs)
+	if err != nil {
+		errObj := err.(*ErrorBySessionID)
+		errObj.error = errors.New("failed to SendToAliveSessions")
 	}
 	return err
 }

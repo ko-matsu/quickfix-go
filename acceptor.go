@@ -331,6 +331,7 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 		a.globalLog.OnEventf("Unable to accept %v", err.Error())
 		return
 	}
+	connectMutex.Unlock()
 	connectMutex = nil
 
 	go func() {

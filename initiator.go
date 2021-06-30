@@ -3,6 +3,7 @@ package quickfix
 import (
 	"bufio"
 	"crypto/tls"
+	"errors"
 	"strings"
 	"sync"
 	"time"
@@ -199,4 +200,47 @@ func (i *Initiator) handleConnection(session *session, tlsConfig *tls.Config, di
 			return
 		}
 	}
+}
+
+// append API ------------------------------------------------------------------
+
+// GetAliveSessionIDs This function returns loggedOn sessionID list.
+func (i *Initiator) GetAliveSessionIDs() []SessionID {
+	sessionIds := make([]SessionID, 0, len(i.sessions))
+	for sessionID, session := range i.sessions {
+		if session.IsLoggedOn() {
+			sessionIds = append(sessionIds, sessionID)
+		}
+	}
+	return sessionIds
+}
+
+// IsAliveSession This function checks if the session is a logged on session or not.
+func (i *Initiator) IsAliveSession(sessionID SessionID) bool {
+	session, ok := i.sessions[sessionID]
+	if ok {
+		return session.IsLoggedOn()
+	}
+	return false
+}
+
+// SendToAliveSession This function send message for logged on session.
+func (i *Initiator) SendToAliveSession(m Messagable, sessionID SessionID) (err error) {
+	if !i.IsAliveSession(sessionID) {
+		err = ErrDoNotLoggedOnSession
+	} else {
+		err = SendToAliveSession(m, sessionID)
+	}
+	return err
+}
+
+// SendToAliveSessions This function send messages for logged on sessions.
+func (i *Initiator) SendToAliveSessions(m Messagable) (err error) {
+	sessionIDs := i.GetAliveSessionIDs()
+	err = sendToSessions(m, sessionIDs)
+	if err != nil {
+		errObj := err.(*ErrorBySessionID)
+		errObj.error = errors.New("failed to SendToAliveSessions")
+	}
+	return err
 }

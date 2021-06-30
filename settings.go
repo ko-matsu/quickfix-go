@@ -122,7 +122,14 @@ func ParseSettings(reader io.Reader) (*Settings, error) {
 		return s, err
 	}
 
-	if settings == nil || settings == s.GlobalSettings() {
+	if settings == nil {
+		return s, fmt.Errorf("no sessions declared")
+	} else if settings == s.GlobalSettings() {
+		dynamicSessions, _ := s.globalSettings.BoolSetting(config.DynamicSessions)
+		if dynamicSessions {
+			// If dynamic sessions is valid, it is assumed to be successful.
+			return s, nil
+		}
 		return s, fmt.Errorf("no sessions declared")
 	}
 	_, err := s.AddSession(settings)

@@ -45,6 +45,7 @@ type session struct {
 
 	messagePool
 	timestampPrecision TimestampPrecision
+	linkedAcceptor     *Acceptor
 }
 
 func (s *session) logError(err error) {

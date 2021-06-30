@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/tls"
+	"errors"
 	"io"
 	"net"
 	"runtime/debug"
@@ -16,6 +17,7 @@ import (
 
 //Acceptor accepts connections from FIX clients and manages the associated sessions.
 type Acceptor struct {
+	addressMutex          sync.RWMutex
 	app                   Application
 	settings              *Settings
 	logFactory            LogFactory
@@ -125,7 +127,9 @@ func (a *Acceptor) Stop() {
 
 //RemoteAddr Get remote IP address for a given session.
 func (a *Acceptor) RemoteAddr(sessionID SessionID) (net.Addr, bool) {
+	a.addressMutex.RLock()
 	addr, ok := a.sessionAddr[sessionID]
+	a.addressMutex.RUnlock()
 	return addr, ok
 }
 
@@ -166,6 +170,7 @@ func NewAcceptor(app Application, storeFactory MessageStoreFactory, settings *Se
 		if a.sessions[sessID], err = a.createSession(sessionID, storeFactory, sessionSettings, logFactory, app); err != nil {
 			return
 		}
+		a.sessions[sessID].linkedAcceptor = a
 	}
 
 	return
@@ -288,6 +293,7 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 		a.dynamicQualifierCount++
 		sessID.Qualifier = strconv.Itoa(a.dynamicQualifierCount)
 	}
+
 	session, ok := a.sessions[sessID]
 	if !ok {
 		if !a.dynamicSessions {
@@ -299,12 +305,13 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 			a.globalLog.OnEventf("Dynamic session %v failed to create: %v", sessID, err)
 			return
 		}
+		dynamicSession.linkedAcceptor = a
+
 		a.dynamicSessionChan <- dynamicSession
 		session = dynamicSession
 		defer session.stop()
 	}
 
-	a.sessionAddr[sessID] = netConn.RemoteAddr()
 	msgIn := make(chan fixIn)
 	msgOut := make(chan []byte)
 
@@ -312,6 +319,9 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 		a.globalLog.OnEventf("Unable to accept %v", err.Error())
 		return
 	}
+	a.addressMutex.Lock()
+	a.sessionAddr[sessID] = netConn.RemoteAddr()
+	a.addressMutex.Unlock()
 
 	go func() {
 		msgIn <- fixIn{msgBytes, parser.lastRead}
@@ -351,7 +361,9 @@ LOOP:
 		case id := <-complete:
 			session, ok := sessions[id]
 			if ok {
+				a.addressMutex.Lock()
 				delete(a.sessionAddr, session.sessionID)
+				a.addressMutex.Unlock()
 				delete(sessions, id)
 			} else {
 				a.globalLog.OnEventf("Missing dynamic session %v!", id)
@@ -378,4 +390,64 @@ LOOP:
 // 	a.SetConnectionValidator(nil)
 func (a *Acceptor) SetConnectionValidator(validator ConnectionValidator) {
 	a.connectionValidator = validator
+}
+
+// append API ------------------------------------------------------------------
+
+// GetSessionIDs This function returns managed all sessionID list.
+func (a *Acceptor) GetSessionIDs() []SessionID {
+	sessionsLock.RLock()
+	defer sessionsLock.RUnlock()
+	sessionIds := make([]SessionID, 0, len(a.sessions))
+	for sessionID, session := range sessions {
+		if session.linkedAcceptor == a {
+			sessionIds = append(sessionIds, sessionID)
+		}
+	}
+	return sessionIds
+}
+
+// GetAliveSessionIDs This function returns loggedOn sessionID list.
+func (a *Acceptor) GetAliveSessionIDs() []SessionID {
+	sessionsLock.RLock()
+	defer sessionsLock.RUnlock()
+	sessionIds := make([]SessionID, 0, len(a.sessions))
+	for sessionID, session := range sessions {
+		if (session.linkedAcceptor == a) && session.IsLoggedOn() {
+			sessionIds = append(sessionIds, sessionID)
+		}
+	}
+	return sessionIds
+}
+
+// IsAliveSession This function checks if the session is a logged on session or not.
+func (a *Acceptor) IsAliveSession(sessionID SessionID) bool {
+	sessionsLock.RLock()
+	defer sessionsLock.RUnlock()
+	session, ok := sessions[sessionID]
+	if ok && (session.linkedAcceptor == a) {
+		return session.IsLoggedOn()
+	}
+	return false
+}
+
+// SendToAliveSession This function send message for logged on session.
+func (a *Acceptor) SendToAliveSession(m Messagable, sessionID SessionID) (err error) {
+	if !a.IsAliveSession(sessionID) {
+		err = ErrDoNotLoggedOnSession
+	} else {
+		err = SendToAliveSession(m, sessionID)
+	}
+	return err
+}
+
+// SendToAliveSessions This function send messages for logged on sessions.
+func (a *Acceptor) SendToAliveSessions(m Messagable) (err error) {
+	sessionIDs := a.GetAliveSessionIDs()
+	err = sendToSessions(m, sessionIDs)
+	if err != nil {
+		errObj := err.(*ErrorBySessionID)
+		errObj.error = errors.New("failed to SendToAliveSessions")
+	}
+	return err
 }

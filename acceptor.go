@@ -331,7 +331,10 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 		a.globalLog.OnEventf("Unable to accept %v", err.Error())
 		return
 	}
-	connectMutex = nil
+	if connectMutex != nil {
+		connectMutex.Unlock()
+		connectMutex = nil
+	}
 
 	go func() {
 		msgIn <- fixIn{msgBytes, parser.lastRead}

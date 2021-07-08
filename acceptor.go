@@ -11,13 +11,12 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/armon/go-proxyproto"
+	proxyproto "github.com/armon/go-proxyproto"
 	"github.com/cryptogarageinc/quickfix-go/config"
 )
 
 //Acceptor accepts connections from FIX clients and manages the associated sessions.
 type Acceptor struct {
-	addressMutex          sync.RWMutex
 	app                   Application
 	settings              *Settings
 	logFactory            LogFactory
@@ -25,13 +24,14 @@ type Acceptor struct {
 	globalLog             Log
 	sessions              map[SessionID]*session
 	sessionGroup          sync.WaitGroup
-	listener              net.Listener
 	listenerShutdown      sync.WaitGroup
 	dynamicSessions       bool
 	dynamicQualifier      bool
 	dynamicQualifierCount int
 	dynamicSessionChan    chan *session
-	sessionAddr           map[SessionID]net.Addr
+	sessionAddr           sync.Map
+	sessionHostPort       map[SessionID]int
+	listeners             map[string]net.Listener
 	connectionValidator   ConnectionValidator
 	sessionFactory
 }
@@ -44,56 +44,58 @@ type ConnectionValidator interface {
 }
 
 //Start accepting connections.
-func (a *Acceptor) Start() error {
+func (a *Acceptor) Start() (err error) {
 	socketAcceptHost := ""
 	if a.settings.GlobalSettings().HasSetting(config.SocketAcceptHost) {
-		var err error
 		if socketAcceptHost, err = a.settings.GlobalSettings().Setting(config.SocketAcceptHost); err != nil {
-			return err
+			return
 		}
 	}
 
-	socketAcceptPort, err := a.settings.GlobalSettings().IntSetting(config.SocketAcceptPort)
-	if err != nil {
-		return err
+	a.sessionHostPort = make(map[SessionID]int)
+	a.listeners = make(map[string]net.Listener)
+	for sessionID, sessionSettings := range a.settings.SessionSettings() {
+		if sessionSettings.HasSetting(config.SocketAcceptPort) {
+			if a.sessionHostPort[sessionID], err = sessionSettings.IntSetting(config.SocketAcceptPort); err != nil {
+				return
+			}
+		} else if a.sessionHostPort[sessionID], err = a.settings.GlobalSettings().IntSetting(config.SocketAcceptPort); err != nil {
+			return
+		}
+		address := net.JoinHostPort(socketAcceptHost, strconv.Itoa(a.sessionHostPort[sessionID]))
+		a.listeners[address] = nil
 	}
 
 	var tlsConfig *tls.Config
 	if tlsConfig, err = loadTLSConfig(a.settings.GlobalSettings()); err != nil {
-		return err
+		return
 	}
 
 	var useTCPProxy bool
 	if a.settings.GlobalSettings().HasSetting(config.UseTCPProxy) {
 		if useTCPProxy, err = a.settings.GlobalSettings().BoolSetting(config.UseTCPProxy); err != nil {
-			return err
+			return
 		}
 	}
 
-	address := net.JoinHostPort(socketAcceptHost, strconv.Itoa(socketAcceptPort))
+	for address := range a.listeners {
 	if tlsConfig != nil {
-		if a.listener, err = tls.Listen("tcp", address, tlsConfig); err != nil {
-			return err
+			if a.listeners[address], err = tls.Listen("tcp", address, tlsConfig); err != nil {
+				return
 		}
+		} else if a.listeners[address], err = net.Listen("tcp", address); err != nil {
+			return
 	} else if useTCPProxy {
-		listener, err := net.Listen("tcp", address)
-		if err != nil {
-			return err
-		}
-		a.listener = &proxyproto.Listener{Listener: listener}
-	} else {
-		if a.listener, err = net.Listen("tcp", address); err != nil {
-			return err
+			a.listeners[address] = &proxyproto.Listener{Listener: a.listeners[address]}
 		}
 	}
 
-	for sessionID := range a.sessions {
-		session := a.sessions[sessionID]
+	for _, s := range a.sessions {
 		a.sessionGroup.Add(1)
-		go func() {
-			session.run()
+		go func(s *session) {
+			s.run()
 			a.sessionGroup.Done()
-		}()
+		}(s)
 	}
 	if a.dynamicSessions {
 		a.dynamicSessionChan = make(chan *session)
@@ -103,9 +105,11 @@ func (a *Acceptor) Start() error {
 			a.sessionGroup.Done()
 		}()
 	}
-	a.listenerShutdown.Add(1)
-	go a.listenForConnections()
-	return nil
+	a.listenerShutdown.Add(len(a.listeners))
+	for _, listener := range a.listeners {
+		go a.listenForConnections(listener)
+	}
+	return
 }
 
 //Stop logs out existing sessions, close their connections, and stop accepting new connections.
@@ -114,7 +118,9 @@ func (a *Acceptor) Stop() {
 		_ = recover() // suppress sending on closed channel error
 	}()
 
-	a.listener.Close()
+	for _, listener := range a.listeners {
+		listener.Close()
+	}
 	a.listenerShutdown.Wait()
 	if a.dynamicSessions {
 		close(a.dynamicSessionChan)
@@ -127,10 +133,12 @@ func (a *Acceptor) Stop() {
 
 //RemoteAddr Get remote IP address for a given session.
 func (a *Acceptor) RemoteAddr(sessionID SessionID) (net.Addr, bool) {
-	a.addressMutex.RLock()
-	addr, ok := a.sessionAddr[sessionID]
-	a.addressMutex.RUnlock()
-	return addr, ok
+	addr, ok := a.sessionAddr.Load(sessionID)
+	if !ok || addr == nil {
+		return nil, false
+	}
+	val, ok := addr.(net.Addr)
+	return val, ok
 }
 
 //NewAcceptor creates and initializes a new Acceptor.
@@ -141,7 +149,8 @@ func NewAcceptor(app Application, storeFactory MessageStoreFactory, settings *Se
 		settings:     settings,
 		logFactory:   logFactory,
 		sessions:     make(map[SessionID]*session),
-		sessionAddr:  make(map[SessionID]net.Addr),
+		sessionHostPort: make(map[SessionID]int),
+		listeners:       make(map[string]net.Listener),
 	}
 	if a.settings.GlobalSettings().HasSetting(config.DynamicSessions) {
 		if a.dynamicSessions, err = settings.globalSettings.BoolSetting(config.DynamicSessions); err != nil {
@@ -176,11 +185,11 @@ func NewAcceptor(app Application, storeFactory MessageStoreFactory, settings *Se
 	return
 }
 
-func (a *Acceptor) listenForConnections() {
+func (a *Acceptor) listenForConnections(listener net.Listener) {
 	defer a.listenerShutdown.Done()
 
 	for {
-		netConn, err := a.listener.Accept()
+		netConn, err := listener.Accept()
 		if err != nil {
 			return
 		}
@@ -281,6 +290,12 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 		TargetCompID: string(senderCompID), TargetSubID: string(senderSubID), TargetLocationID: string(senderLocationID),
 	}
 
+	localConnectionPort := netConn.LocalAddr().(*net.TCPAddr).Port
+	if expectedPort, ok := a.sessionHostPort[sessID]; !ok || expectedPort != localConnectionPort {
+		a.globalLog.OnEventf("Session %v not found for incoming message: %s", sessID, msgBytes)
+		return
+	}
+
 	// We have a session ID and a network connection. This seems to be a good place for any custom authentication logic.
 	if a.connectionValidator != nil {
 		if err := a.connectionValidator.Validate(netConn, sessID); err != nil {
@@ -319,9 +334,7 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 		a.globalLog.OnEventf("Unable to accept %v", err.Error())
 		return
 	}
-	a.addressMutex.Lock()
-	a.sessionAddr[sessID] = netConn.RemoteAddr()
-	a.addressMutex.Unlock()
+	a.sessionAddr.Store(sessID, netConn.RemoteAddr())
 
 	go func() {
 		msgIn <- fixIn{msgBytes, parser.lastRead}
@@ -361,9 +374,7 @@ LOOP:
 		case id := <-complete:
 			session, ok := sessions[id]
 			if ok {
-				a.addressMutex.Lock()
-				delete(a.sessionAddr, session.sessionID)
-				a.addressMutex.Unlock()
+				a.sessionAddr.Delete(session.sessionID)
 				delete(sessions, id)
 			} else {
 				a.globalLog.OnEventf("Missing dynamic session %v!", id)

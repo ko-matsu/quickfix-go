@@ -65,6 +65,15 @@ func (a *Acceptor) Start() (err error) {
 		address := net.JoinHostPort(socketAcceptHost, strconv.Itoa(a.sessionHostPort[sessionID]))
 		a.listeners[address] = nil
 	}
+	if len(a.listeners) == 0 { // DynamicSessions only
+		var socketAcceptPort int
+		socketAcceptPort, err = a.settings.GlobalSettings().IntSetting(config.SocketAcceptPort)
+		if err != nil {
+			return
+		}
+		address := net.JoinHostPort(socketAcceptHost, strconv.Itoa(socketAcceptPort))
+		a.listeners[address] = nil
+	}
 
 	var tlsConfig *tls.Config
 	if tlsConfig, err = loadTLSConfig(a.settings.GlobalSettings()); err != nil {
@@ -79,13 +88,13 @@ func (a *Acceptor) Start() (err error) {
 	}
 
 	for address := range a.listeners {
-	if tlsConfig != nil {
+		if tlsConfig != nil {
 			if a.listeners[address], err = tls.Listen("tcp", address, tlsConfig); err != nil {
 				return
-		}
+			}
 		} else if a.listeners[address], err = net.Listen("tcp", address); err != nil {
 			return
-	} else if useTCPProxy {
+		} else if useTCPProxy {
 			a.listeners[address] = &proxyproto.Listener{Listener: a.listeners[address]}
 		}
 	}
@@ -144,11 +153,11 @@ func (a *Acceptor) RemoteAddr(sessionID SessionID) (net.Addr, bool) {
 //NewAcceptor creates and initializes a new Acceptor.
 func NewAcceptor(app Application, storeFactory MessageStoreFactory, settings *Settings, logFactory LogFactory) (a *Acceptor, err error) {
 	a = &Acceptor{
-		app:          app,
-		storeFactory: storeFactory,
-		settings:     settings,
-		logFactory:   logFactory,
-		sessions:     make(map[SessionID]*session),
+		app:             app,
+		storeFactory:    storeFactory,
+		settings:        settings,
+		logFactory:      logFactory,
+		sessions:        make(map[SessionID]*session),
 		sessionHostPort: make(map[SessionID]int),
 		listeners:       make(map[string]net.Listener),
 	}
@@ -291,7 +300,8 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 	}
 
 	localConnectionPort := netConn.LocalAddr().(*net.TCPAddr).Port
-	if expectedPort, ok := a.sessionHostPort[sessID]; !ok || expectedPort != localConnectionPort {
+	if expectedPort, ok := a.sessionHostPort[sessID]; ok && expectedPort != localConnectionPort {
+		// If it is not included in sessionHostPort, we will check if it is included in sessions in a later process.
 		a.globalLog.OnEventf("Session %v not found for incoming message: %s", sessID, msgBytes)
 		return
 	}

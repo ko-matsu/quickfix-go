@@ -74,10 +74,6 @@ func (s *session) connect(msgIn <-chan fixIn, msgOut chan<- []byte) error {
 		err:        rep,
 	}
 
-	if s.notifyLogon == nil {
-		s.notifyLogon = make(chan struct{})
-		s.notifyOnce = &sync.Once{}
-	}
 	return <-rep
 }
 
@@ -733,6 +729,11 @@ func (s *session) onAdmin(msg interface{}) {
 				close(msg.err)
 			}
 			return
+		}
+
+		if s.notifyLogon == nil {
+			s.notifyLogon = make(chan struct{})
+			s.notifyOnce = &sync.Once{}
 		}
 
 		if msg.err != nil {

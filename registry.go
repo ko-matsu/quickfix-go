@@ -209,7 +209,7 @@ func WaitForLogon(sessionID SessionID) <-chan struct{} {
 	sessionsLock.Lock()
 	defer sessionsLock.Unlock()
 	if session, ok := sessions[sessionID]; ok {
-		return session.notifyLogon
+		return session.notifyLogonEvent
 	}
-	return nil
+	return nil // fail case
 }

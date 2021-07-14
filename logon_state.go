@@ -41,12 +41,6 @@ func (s logonState) FixMsgIn(session *session, msg *Message) (nextState sessionS
 			return handleStateError(session, err)
 		}
 	}
-
-	if session.notifyOnce != nil {
-		session.notifyOnce.Do(func() {
-			close(session.notifyLogon)
-		})
-	}
 	return inSession{}
 }
 

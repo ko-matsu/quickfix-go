@@ -205,7 +205,7 @@ func fillHeaderBySessionID(m *Message, sessionID SessionID) *Message {
 }
 
 // WaitLogon This function wait for logon session.
-func WaitLogon(sessionID SessionID) <-chan struct{} {
+func WaitForLogon(sessionID SessionID) <-chan struct{} {
 	sessionsLock.Lock()
 	defer sessionsLock.Unlock()
 	if session, ok := sessions[sessionID]; ok {

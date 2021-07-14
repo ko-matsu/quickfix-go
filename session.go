@@ -46,7 +46,8 @@ type session struct {
 	messagePool
 	timestampPrecision TimestampPrecision
 	linkedAcceptor     *Acceptor
-	stateChangeChan    chan<- SessionID
+	notifyOnce         *sync.Once
+	notifyLogon        chan struct{}
 }
 
 func (s *session) logError(err error) {
@@ -73,6 +74,10 @@ func (s *session) connect(msgIn <-chan fixIn, msgOut chan<- []byte) error {
 		err:        rep,
 	}
 
+	if s.notifyLogon == nil {
+		s.notifyLogon = make(chan struct{})
+		s.notifyOnce = &sync.Once{}
+	}
 	return <-rep
 }
 
@@ -700,6 +705,12 @@ func (s *session) onDisconnect() {
 	}
 
 	s.messageIn = nil
+	if s.notifyOnce != nil {
+		s.notifyOnce.Do(func() {
+			close(s.notifyLogon)
+		})
+	}
+	s.notifyLogon = nil
 }
 
 func (s *session) onAdmin(msg interface{}) {
@@ -771,12 +782,7 @@ func (s *session) run() {
 			if !ok {
 				s.Disconnected(s)
 			} else {
-				oldState := s.stateMachine.State
 				s.Incoming(s, fixIn)
-
-				if oldState != s.stateMachine.State && s.stateChangeChan != nil {
-					s.stateChangeChan <- s.sessionID
-				}
 			}
 
 		case evt := <-s.sessionEvent:

@@ -104,6 +104,17 @@ func NewErrorBySessionID(err error) (response *ErrorBySessionID) {
 	return response
 }
 
+// GetSessionIDs This function returns sessionID list.
+func GetSessionIDs() []SessionID {
+	sessionsLock.Lock()
+	defer sessionsLock.Unlock()
+	sessionIds := make([]SessionID, 0, len(sessions))
+	for sessionID := range sessions {
+		sessionIds = append(sessionIds, sessionID)
+	}
+	return sessionIds
+}
+
 // GetAliveSessionIDs This function returns loggedOn sessionID list.
 func GetAliveSessionIDs() []SessionID {
 	sessionsLock.Lock()
@@ -191,4 +202,14 @@ func fillHeaderBySessionID(m *Message, sessionID SessionID) *Message {
 		m.Header.SetField(tagTargetLocationID, FIXString(sessionID.TargetLocationID))
 	}
 	return m
+}
+
+// WaitLogon This function wait for logon session.
+func WaitLogon(sessionID SessionID) <-chan struct{} {
+	sessionsLock.Lock()
+	defer sessionsLock.Unlock()
+	if session, ok := sessions[sessionID]; ok {
+		return session.notifyLogon
+	}
+	return nil
 }

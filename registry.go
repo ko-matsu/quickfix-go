@@ -204,7 +204,7 @@ func fillHeaderBySessionID(m *Message, sessionID SessionID) *Message {
 	return m
 }
 
-// WaitLogon This function wait for logon session.
+// WaitForLogon returns channel to receive logon event by specific session. if non-existing sessionID specified, it returns nil which blocks forever.
 func WaitForLogon(sessionID SessionID) <-chan struct{} {
 	sessionsLock.Lock()
 	defer sessionsLock.Unlock()

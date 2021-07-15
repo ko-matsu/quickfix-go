@@ -177,14 +177,23 @@ func (sm *stateMachine) handleDisconnectState(s *session) {
 }
 
 func (sm *stateMachine) IsLoggedOn() bool {
+	if sm.State == nil {
+		return false
+	}
 	return sm.State.IsLoggedOn()
 }
 
 func (sm *stateMachine) IsConnected() bool {
+	if sm.State == nil {
+		return false
+	}
 	return sm.State.IsConnected()
 }
 
 func (sm *stateMachine) IsSessionTime() bool {
+	if sm.State == nil {
+		return false
+	}
 	return sm.State.IsSessionTime()
 }
 

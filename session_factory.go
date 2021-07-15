@@ -299,6 +299,7 @@ func (f sessionFactory) newSession(
 	s.sessionEvent = make(chan internal.Event)
 	s.messageEvent = make(chan bool, 1)
 	s.admin = make(chan interface{})
+	s.notifyLogonEvent = make(chan struct{}, 1)
 	s.application = application
 	return
 }

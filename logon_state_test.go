@@ -20,6 +20,7 @@ func TestLogonStateTestSuite(t *testing.T) {
 func (s *LogonStateTestSuite) SetupTest() {
 	s.Init()
 	s.session.stateMachine.State = logonState{}
+	s.session.notifyLogonEvent = make(chan struct{}, 1)
 }
 
 func (s *LogonStateTestSuite) TestPreliminary() {

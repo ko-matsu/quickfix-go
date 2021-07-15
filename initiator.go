@@ -204,6 +204,15 @@ func (i *Initiator) handleConnection(session *session, tlsConfig *tls.Config, di
 
 // append API ------------------------------------------------------------------
 
+// GetSessionIDs This function returns sessionID list.
+func (i *Initiator) GetSessionIDs() []SessionID {
+	sessionIds := make([]SessionID, 0, len(i.sessions))
+	for sessionID := range i.sessions {
+		sessionIds = append(sessionIds, sessionID)
+	}
+	return sessionIds
+}
+
 // GetAliveSessionIDs This function returns loggedOn sessionID list.
 func (i *Initiator) GetAliveSessionIDs() []SessionID {
 	sessionIds := make([]SessionID, 0, len(i.sessions))

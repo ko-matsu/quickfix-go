@@ -46,6 +46,8 @@ type session struct {
 	messagePool
 	timestampPrecision TimestampPrecision
 	linkedAcceptor     *Acceptor
+
+	notifyLogonEvent chan struct{}
 }
 
 func (s *session) logError(err error) {
@@ -456,6 +458,7 @@ func (s *session) handleLogon(msg *Message) error {
 
 	s.peerTimer.Reset(time.Duration(float64(1.2) * float64(s.HeartBtInt)))
 	s.application.OnLogon(s.sessionID)
+	s.notifyLogonEvent <- struct{}{}
 
 	if err := s.checkTargetTooHigh(msg); err != nil {
 		return err
@@ -699,6 +702,11 @@ func (s *session) onDisconnect() {
 	}
 
 	s.messageIn = nil
+
+	select {
+	case <-s.notifyLogonEvent: // cleanup single buffer
+	default:
+	}
 }
 
 func (s *session) onAdmin(msg interface{}) {

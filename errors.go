@@ -25,6 +25,8 @@ const (
 	rejectReasonTagSpecifiedOutOfRequiredOrder            = 14
 	rejectReasonRepeatingGroupFieldsOutOfOrder            = 15
 	rejectReasonIncorrectNumInGroupCountForRepeatingGroup = 16
+	rejectReasonOther                                     = 99
+	// rejectReasonNonDataValueIncludesFieldDelimiter     = 17
 )
 
 //MessageRejectError is a type of error that can correlate to a message reject.
@@ -172,4 +174,9 @@ func compIDProblem() MessageRejectError {
 //sendingTimeAccuracyProblem creates a reject for a msg with stale or invalid sending time.
 func sendingTimeAccuracyProblem() MessageRejectError {
 	return NewMessageRejectError("SendingTime accuracy problem", rejectReasonSendingTimeAccuracyProblem, nil)
+}
+
+//NewOtherRejectError returns a MessageRejectError with the given error message
+func NewOtherRejectError(err string) MessageRejectError {
+	return messageRejectError{text: err, rejectReason: rejectReasonOther}
 }

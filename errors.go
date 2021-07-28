@@ -25,8 +25,8 @@ const (
 	rejectReasonTagSpecifiedOutOfRequiredOrder            = 14
 	rejectReasonRepeatingGroupFieldsOutOfOrder            = 15
 	rejectReasonIncorrectNumInGroupCountForRepeatingGroup = 16
-	rejectReasonNonDataValueIncludesFieldDelimiter        = 17
 	rejectReasonOther                                     = 99
+	// rejectReasonNonDataValueIncludesFieldDelimiter     = 17
 )
 
 //MessageRejectError is a type of error that can correlate to a message reject.

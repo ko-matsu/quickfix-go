@@ -26,6 +26,7 @@ const (
 	rejectReasonRepeatingGroupFieldsOutOfOrder            = 15
 	rejectReasonIncorrectNumInGroupCountForRepeatingGroup = 16
 	rejectReasonOther                                     = 99
+	businessRejectReasonOther                             = 0
 	// rejectReasonNonDataValueIncludesFieldDelimiter     = 17
 )
 
@@ -179,4 +180,9 @@ func sendingTimeAccuracyProblem() MessageRejectError {
 //NewOtherRejectError returns a MessageRejectError with the given error message
 func NewOtherRejectError(err string) MessageRejectError {
 	return messageRejectError{text: err, rejectReason: rejectReasonOther}
+}
+
+//NewOtherBusinessRejectError returns a BusinessMessageRejectError with the given error message
+func NewOtherBusinessRejectError(err string) MessageRejectError {
+	return NewBusinessMessageRejectError(err, businessRejectReasonOther, nil)
 }

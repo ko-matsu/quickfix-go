@@ -16,7 +16,6 @@ const (
 	rejectReasonUnsupportedMessageType                    = 3
 	rejectReasonTagSpecifiedWithoutAValue                 = 4
 	rejectReasonValueIsIncorrect                          = 5
-	rejectReasonConditionallyRequiredFieldMissing         = 5
 	rejectReasonIncorrectDataFormatForValue               = 6
 	rejectReasonCompIDProblem                             = 9
 	rejectReasonSendingTimeAccuracyProblem                = 10
@@ -26,8 +25,19 @@ const (
 	rejectReasonRepeatingGroupFieldsOutOfOrder            = 15
 	rejectReasonIncorrectNumInGroupCountForRepeatingGroup = 16
 	rejectReasonOther                                     = 99
-	businessRejectReasonOther                             = 0
+	// rejectReasonDecryptionProblem                      = 7
+	// rejectReasonSignatureProblem                       = 8
+	// rejectReasonXmlValicationError                     = 12
 	// rejectReasonNonDataValueIncludesFieldDelimiter     = 17
+
+	businessRejectReasonOther                             = 0
+	businessRejectReasonConditionallyRequiredFieldMissing = 5
+	// businessRejectReasonUnknownId                           = 1
+	// businessRejectReasonUnknownSecurity                     = 2
+	// businessRejectReasonUnsupportedMessageType              = 3
+	// businessRejectReasonApplicationNotAvailable             = 4
+	// businessRejectReasonDelivertoFirmNotAvailableAtThisTime = 7
+	// businessRejectReasonNotAuthorized                       = 6
 )
 
 //MessageRejectError is a type of error that can correlate to a message reject.
@@ -113,7 +123,7 @@ func ValueIsIncorrect(tag Tag) MessageRejectError {
 
 //ConditionallyRequiredFieldMissing indicates that the requested field could not be found in the FIX message.
 func ConditionallyRequiredFieldMissing(tag Tag) MessageRejectError {
-	return NewBusinessMessageRejectError(fmt.Sprintf("Conditionally Required Field Missing (%d)", tag), rejectReasonConditionallyRequiredFieldMissing, &tag)
+	return NewBusinessMessageRejectError(fmt.Sprintf("Conditionally Required Field Missing (%d)", tag), businessRejectReasonConditionallyRequiredFieldMissing, &tag)
 }
 
 //valueIsIncorrectNoTag returns an error indicating a field with value that is not valid.

@@ -52,6 +52,8 @@ const (
 	SQLStoreDriver               string = "SQLStoreDriver"
 	SQLStoreDataSourceName       string = "SQLStoreDataSourceName"
 	SQLStoreConnMaxLifetime      string = "SQLStoreConnMaxLifetime"
+	SQLStoreConnMaxIdle          string = "SQLStoreConnMaxIdle"
+	SQLStoreConnMaxOpen          string = "SQLStoreConnMaxOpen"
 	MongoStoreConnection         string = "MongoStoreConnection"
 	MongoStoreDatabase           string = "MongoStoreDatabase"
 	ValidateFieldsOutOfOrder     string = "ValidateFieldsOutOfOrder"

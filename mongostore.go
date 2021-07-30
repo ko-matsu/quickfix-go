@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cryptogarageinc/quickfix-go/config"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
-	"github.com/cryptogarageinc/quickfix-go/config"
 )
 
 type mongoStoreFactory struct {
@@ -42,17 +42,33 @@ func NewMongoStoreFactoryPrefixed(settings *Settings, collectionsPrefix string) 
 
 // Create creates a new MongoStore implementation of the MessageStore interface
 func (f mongoStoreFactory) Create(sessionID SessionID) (msgStore MessageStore, err error) {
-	sessionSettings, ok := f.settings.SessionSettings()[sessionID]
-	if !ok {
-		return nil, fmt.Errorf("unknown session: %v", sessionID)
+	var mongoConnectionURL string
+	var mongoDatabase string
+
+	settings := make([]*SessionSettings, 1, 2)
+	settings[0] = f.settings.GlobalSettings()
+	if sessionSettings, ok := f.settings.SessionSettings()[sessionID]; ok {
+		settings = append(settings, sessionSettings)
 	}
-	mongoConnectionURL, err := sessionSettings.Setting(config.MongoStoreConnection)
-	if err != nil {
-		return nil, err
+	for _, sessionSettings := range settings {
+		if sessionSettings.HasSetting(config.MongoStoreConnection) {
+			mongoConnectionURL, err = sessionSettings.Setting(config.MongoStoreConnection)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if sessionSettings.HasSetting(config.MongoStoreDatabase) {
+			mongoDatabase, err = sessionSettings.Setting(config.MongoStoreDatabase)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
-	mongoDatabase, err := sessionSettings.Setting(config.MongoStoreDatabase)
-	if err != nil {
-		return nil, err
+
+	if len(mongoConnectionURL) == 0 {
+		return nil, fmt.Errorf("MongoStoreConnection configuration is not found. session: %v", sessionID)
+	} else if len(mongoDatabase) == 0 {
+		return nil, fmt.Errorf("MongoStoreDatabase configuration is not found. session: %v", sessionID)
 	}
 	return newMongoStore(sessionID, mongoConnectionURL, mongoDatabase, f.messagesCollection, f.sessionsCollection)
 }

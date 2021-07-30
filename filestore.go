@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/cryptogarageinc/quickfix-go/config"
+	"github.com/pkg/errors"
 )
 
 type msgDef struct {
@@ -45,13 +45,24 @@ func NewFileStoreFactory(settings *Settings) MessageStoreFactory {
 
 // Create creates a new FileStore implementation of the MessageStore interface
 func (f fileStoreFactory) Create(sessionID SessionID) (msgStore MessageStore, err error) {
-	sessionSettings, ok := f.settings.SessionSettings()[sessionID]
-	if !ok {
-		return nil, fmt.Errorf("unknown session: %v", sessionID)
+	var dirname string
+
+	settings := make([]*SessionSettings, 1, 2)
+	settings[0] = f.settings.GlobalSettings()
+	if sessionSettings, ok := f.settings.SessionSettings()[sessionID]; ok {
+		settings = append(settings, sessionSettings)
 	}
-	dirname, err := sessionSettings.Setting(config.FileStorePath)
-	if err != nil {
-		return nil, err
+	for _, sessionSettings := range settings {
+		if sessionSettings.HasSetting(config.FileStorePath) {
+			dirname, err = sessionSettings.Setting(config.FileStorePath)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if len(dirname) == 0 {
+		return nil, fmt.Errorf("FileStorePath configuration is not found. session: %v", sessionID)
 	}
 	return newFileStore(sessionID, dirname)
 }

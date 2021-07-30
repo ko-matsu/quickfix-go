@@ -37,40 +37,55 @@ func NewSQLStoreFactory(settings *Settings) MessageStoreFactory {
 
 // Create creates a new SQLStore implementation of the MessageStore interface
 func (f sqlStoreFactory) Create(sessionID SessionID) (msgStore MessageStore, err error) {
-	sessionSettings, ok := f.settings.SessionSettings()[sessionID]
-	if !ok {
-		return nil, fmt.Errorf("unknown session: %v", sessionID)
-	}
-	sqlDriver, err := sessionSettings.Setting(config.SQLStoreDriver)
-	if err != nil {
-		return nil, err
-	}
-	sqlDataSourceName, err := sessionSettings.Setting(config.SQLStoreDataSourceName)
-	if err != nil {
-		return nil, err
-	}
+	var sqlDriver string
+	var sqlDataSourceName string
 	sqlConnMaxLifetime := 0 * time.Second
-	if sessionSettings.HasSetting(config.SQLStoreConnMaxLifetime) {
-		sqlConnMaxLifetime, err = sessionSettings.DurationSetting(config.SQLStoreConnMaxLifetime)
-		if err != nil {
-			return nil, err
-		}
-	}
 	sqlConnMaxIdle := 0
-	if sessionSettings.HasSetting(config.SQLStoreConnMaxIdle) {
-		sqlConnMaxIdle, err = sessionSettings.IntSetting(config.SQLStoreConnMaxIdle)
-		if err != nil {
-			return nil, err
-		}
-	}
 	sqlConnMaxOpen := 0
-	if sessionSettings.HasSetting(config.SQLStoreConnMaxOpen) {
-		sqlConnMaxOpen, err = sessionSettings.IntSetting(config.SQLStoreConnMaxOpen)
-		if err != nil {
-			return nil, err
+
+	settings := make([]*SessionSettings, 1, 2)
+	settings[0] = f.settings.GlobalSettings()
+	if sessionSettings, ok := f.settings.SessionSettings()[sessionID]; ok {
+		settings = append(settings, sessionSettings)
+	}
+	for _, sessionSettings := range settings {
+		if sessionSettings.HasSetting(config.SQLStoreDriver) {
+			sqlDriver, err = sessionSettings.Setting(config.SQLStoreDriver)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if sessionSettings.HasSetting(config.SQLStoreDataSourceName) {
+			sqlDataSourceName, err = sessionSettings.Setting(config.SQLStoreDataSourceName)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if sessionSettings.HasSetting(config.SQLStoreConnMaxLifetime) {
+			sqlConnMaxLifetime, err = sessionSettings.DurationSetting(config.SQLStoreConnMaxLifetime)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if sessionSettings.HasSetting(config.SQLStoreConnMaxIdle) {
+			sqlConnMaxIdle, err = sessionSettings.IntSetting(config.SQLStoreConnMaxIdle)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if sessionSettings.HasSetting(config.SQLStoreConnMaxOpen) {
+			sqlConnMaxOpen, err = sessionSettings.IntSetting(config.SQLStoreConnMaxOpen)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
+	if len(sqlDriver) == 0 {
+		return nil, fmt.Errorf("SQLStoreDriver configuration is not found. session: %v", sessionID)
+	} else if len(sqlDataSourceName) == 0 {
+		return nil, fmt.Errorf("SQLStoreDataSourceName configuration is not found. session: %v", sessionID)
+	}
 	return newSQLStore(sessionID, sqlDriver, sqlDataSourceName, dbSettings{
 		connMaxLifetime: sqlConnMaxLifetime,
 		connMaxIdle:     sqlConnMaxIdle,

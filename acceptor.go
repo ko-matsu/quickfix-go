@@ -10,6 +10,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"sync"
+	"time"
 
 	proxyproto "github.com/armon/go-proxyproto"
 	"github.com/cryptogarageinc/quickfix-go/config"
@@ -34,6 +35,8 @@ type Acceptor struct {
 	listeners             map[string]net.Listener
 	connectionValidator   ConnectionValidator
 	sessionFactory
+
+	dynamicStoppedSessionKeepTime int
 }
 
 // ConnectionValidator is an interface allowing to implement a custom authentication logic.
@@ -168,6 +171,12 @@ func NewAcceptor(app Application, storeFactory MessageStoreFactory, settings *Se
 
 		if a.settings.GlobalSettings().HasSetting(config.DynamicQualifier) {
 			if a.dynamicQualifier, err = settings.globalSettings.BoolSetting(config.DynamicQualifier); err != nil {
+				return
+			}
+		}
+
+		if a.settings.GlobalSettings().HasSetting(config.DynamicStoppedSessionKeepTime) {
+			if a.dynamicStoppedSessionKeepTime, err = settings.globalSettings.IntSetting(config.DynamicStoppedSessionKeepTime); err != nil {
 				return
 			}
 		}
@@ -331,6 +340,7 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 			return
 		}
 		dynamicSession.linkedAcceptor = a
+		dynamicSession.stoppedSessionKeepTime = time.Duration(a.dynamicStoppedSessionKeepTime) * time.Second
 
 		a.dynamicSessionChan <- dynamicSession
 		session = dynamicSession
@@ -365,6 +375,7 @@ LOOP:
 		case session, ok := <-a.dynamicSessionChan:
 			if !ok {
 				for _, oldSession := range sessions {
+					oldSession.stoppedSessionKeepTime = 0
 					oldSession.stop()
 				}
 				break LOOP
@@ -392,6 +403,7 @@ LOOP:
 		}
 	}
 
+	unregisterStoppedSessionAll()
 	if len(sessions) == 0 {
 		return
 	}

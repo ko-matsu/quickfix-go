@@ -36,7 +36,7 @@ type Acceptor struct {
 	connectionValidator   ConnectionValidator
 	sessionFactory
 
-	dynamicStoppedSessionKeepTime int
+	dynamicStoppedSessionKeepTime time.Duration
 }
 
 // ConnectionValidator is an interface allowing to implement a custom authentication logic.
@@ -176,7 +176,7 @@ func NewAcceptor(app Application, storeFactory MessageStoreFactory, settings *Se
 		}
 
 		if a.settings.GlobalSettings().HasSetting(config.DynamicStoppedSessionKeepTime) {
-			if a.dynamicStoppedSessionKeepTime, err = settings.globalSettings.IntSetting(config.DynamicStoppedSessionKeepTime); err != nil {
+			if a.dynamicStoppedSessionKeepTime, err = settings.globalSettings.DurationSetting(config.DynamicStoppedSessionKeepTime); err != nil {
 				return
 			}
 		}
@@ -340,7 +340,7 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 			return
 		}
 		dynamicSession.linkedAcceptor = a
-		dynamicSession.stoppedSessionKeepTime = time.Duration(a.dynamicStoppedSessionKeepTime) * time.Second
+		dynamicSession.stoppedSessionKeepTime = a.dynamicStoppedSessionKeepTime
 
 		a.dynamicSessionChan <- dynamicSession
 		session = dynamicSession

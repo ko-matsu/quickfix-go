@@ -244,9 +244,9 @@ func registerStoppedSession(s *session) {
 	defer stoppedSessionsLock.Unlock()
 	deleteOldStoppedSession()
 
-	if oldSess, ok := stoppedSessions[s.sessionID]; ok {
+	if oldSession, ok := stoppedSessions[s.sessionID]; ok {
 		delete(stoppedSessions, s.sessionID)
-		oldSess.close()
+		oldSession.close()
 	}
 	stoppedSessions[s.sessionID] = s
 }
@@ -266,28 +266,8 @@ func unregisterStoppedSessionAll() {
 	stoppedSessionsLock.Lock()
 	defer stoppedSessionsLock.Unlock()
 
-	for _, sess := range stoppedSessions {
-		sess.close()
-	}
-	stoppedSessions = nil
-}
-
-func deleteOldStoppedSession() {
-	if len(stoppedSessions) == 0 {
-		return
-	}
-	currentTime := time.Now().UTC()
-	deleteIDs := make([]SessionID, 0, len(stoppedSessions))
-	for id, sess := range stoppedSessions {
-		if sess.stoppedSessionKeepTime > 0 {
-			diffTime := currentTime.Sub(sess.stopTime)
-			if diffTime > sess.stoppedSessionKeepTime {
-				sess.close()
-				deleteIDs = append(deleteIDs, id)
-			}
-		}
-	}
-	for _, id := range deleteIDs {
+	for id, stoppedSession := range stoppedSessions {
+		stoppedSession.close()
 		delete(stoppedSessions, id)
 	}
 }
@@ -298,4 +278,21 @@ func lookupStoppedSession(sessionID SessionID) (s *session, ok bool) {
 
 	s, ok = stoppedSessions[sessionID]
 	return
+}
+
+func deleteOldStoppedSession() { // internal file function
+	if len(stoppedSessions) == 0 {
+		return
+	}
+	currentTime := time.Now().UTC()
+	for id, stoppedSession := range stoppedSessions {
+		if stoppedSession.stoppedSessionKeepTime < 0 {
+			continue
+		}
+		diffTime := currentTime.Sub(stoppedSession.stopTime)
+		if diffTime > stoppedSession.stoppedSessionKeepTime {
+			stoppedSession.close()
+			delete(stoppedSessions, id)
+		}
+	}
 }

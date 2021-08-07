@@ -379,5 +379,11 @@ Sets the maximum number of connections in the idle connection pool.
 SQLStoreConnMaxOpen
 SetMaxOpenConns sets the maximum number of open connections to the database.
 
+DynamicStoppedSessionKeepTime
+Sets the stopped session keeping seconds on the dynamic session. default is 0.
+If sets the under zero, The stopped session will always continue to be maintained.
+(However, if there is a connection from the same session, the session will be discarded after a 10sec delay.)
+Example(5min): DynamicStoppedSessionKeepTime=300
+
 */
 package config

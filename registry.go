@@ -93,7 +93,7 @@ const (
 	doNotLoggedOnSessionMessage = "session is not loggedOn"
 )
 
-// ErrDoNotLoggedOnSession defines nothing loggedOn session error.
+// ErrDoNotLoggedOnSession defines no loggedOn session error.
 var ErrDoNotLoggedOnSession = errors.New(doNotLoggedOnSessionMessage)
 
 var stoppedSessionsLock sync.RWMutex
@@ -280,7 +280,7 @@ func lookupStoppedSession(sessionID SessionID) (s *session, ok bool) {
 	return
 }
 
-func deleteOldStoppedSession() { // internal file function
+func deleteOldStoppedSession() { // in-file function
 	if len(stoppedSessions) == 0 {
 		return
 	}

@@ -103,7 +103,7 @@ func (store *fileStore) Reset() error {
 		return errors.Wrap(err, "cache reset")
 	}
 
-	if err := store.Close(); err != nil {
+	if err := store.close(); err != nil {
 		return errors.Wrap(err, "close")
 	}
 	if err := removeFile(store.bodyFname); err != nil {
@@ -134,7 +134,7 @@ func (store *fileStore) Refresh() (err error) {
 		return
 	}
 
-	if err = store.Close(); err != nil {
+	if err = store.close(); err != nil {
 		return err
 	}
 

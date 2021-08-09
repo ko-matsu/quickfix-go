@@ -175,3 +175,36 @@ func (suite *MessageStoreTestSuite) TestMessageStore_CreationTime() {
 	require.True(suite.T(), suite.msgStore.CreationTime().After(t0))
 	require.True(suite.T(), suite.msgStore.CreationTime().Before(t1))
 }
+
+func (suite *MessageStoreTestSuite) TestMessageStore_Close_After() {
+	t := suite.T()
+
+	// Given the following saved messages
+	expectedMsgsBySeqNum := map[int]string{
+		1: "In the frozen land of Nador",
+		2: "they were forced to eat Robin's minstrels",
+		3: "and there was much rejoicing",
+	}
+	for seqNum, msg := range expectedMsgsBySeqNum {
+		require.Nil(t, suite.msgStore.SaveMessage(seqNum, []byte(msg)))
+	}
+
+	// Given a MessageStore with the following sender and target seqnums
+	require.Nil(t, suite.msgStore.SetNextSenderMsgSeqNum(867))
+	require.Nil(t, suite.msgStore.SetNextTargetMsgSeqNum(5309))
+
+	suite.msgStore.Close()
+
+	// check for panic
+	err := suite.msgStore.SetNextSenderMsgSeqNum(867)
+	require.Contains(t, err.Error(), "already closed")
+	err = suite.msgStore.SetNextTargetMsgSeqNum(5309)
+	require.Contains(t, err.Error(), "already closed")
+	_, err = suite.msgStore.GetMessages(0, 100)
+	require.Contains(t, err.Error(), "already closed")
+	// check for panic (not error check because fileStore is )
+	err = suite.msgStore.Refresh()
+	require.Contains(t, err.Error(), "already closed")
+	err = suite.msgStore.Reset()
+	require.Contains(t, err.Error(), "already closed")
+}

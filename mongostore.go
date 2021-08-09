@@ -131,6 +131,9 @@ type mongoQuickFixEntryData struct {
 
 // Reset deletes the store records and sets the seqnums back to 1
 func (store *mongoStore) Reset() error {
+	if store.db == nil {
+		return fmt.Errorf("mongoStore already closed")
+	}
 	msgFilter := generateMessageFilter(&store.sessionID)
 	_, err := store.db.DB(store.mongoDatabase).C(store.messagesCollection).RemoveAll(msgFilter)
 
@@ -160,6 +163,9 @@ func (store *mongoStore) Refresh() error {
 }
 
 func (store *mongoStore) populateCache() error {
+	if store.db == nil {
+		return fmt.Errorf("mongoStore already closed")
+	}
 	msgFilter := generateMessageFilter(&store.sessionID)
 	query := store.db.DB(store.mongoDatabase).C(store.sessionsCollection).Find(msgFilter)
 
@@ -210,6 +216,9 @@ func (store *mongoStore) NextTargetMsgSeqNum() int {
 
 // SetNextSenderMsgSeqNum sets the next MsgSeqNum that will be sent
 func (store *mongoStore) SetNextSenderMsgSeqNum(next int) error {
+	if store.db == nil {
+		return fmt.Errorf("mongoStore already closed")
+	}
 	msgFilter := generateMessageFilter(&store.sessionID)
 	sessionUpdate := generateMessageFilter(&store.sessionID)
 	sessionUpdate.IncomingSeqNum = store.cache.NextTargetMsgSeqNum()
@@ -223,6 +232,9 @@ func (store *mongoStore) SetNextSenderMsgSeqNum(next int) error {
 
 // SetNextTargetMsgSeqNum sets the next MsgSeqNum that should be received
 func (store *mongoStore) SetNextTargetMsgSeqNum(next int) error {
+	if store.db == nil {
+		return fmt.Errorf("mongoStore already closed")
+	}
 	msgFilter := generateMessageFilter(&store.sessionID)
 	sessionUpdate := generateMessageFilter(&store.sessionID)
 	sessionUpdate.IncomingSeqNum = next
@@ -256,6 +268,10 @@ func (store *mongoStore) CreationTime() time.Time {
 }
 
 func (store *mongoStore) SaveMessage(seqNum int, msg []byte) (err error) {
+	if store.db == nil {
+		err = fmt.Errorf("mongoStore already closed")
+		return
+	}
 	msgFilter := generateMessageFilter(&store.sessionID)
 	msgFilter.Msgseq = seqNum
 	msgFilter.Message = msg
@@ -264,6 +280,10 @@ func (store *mongoStore) SaveMessage(seqNum int, msg []byte) (err error) {
 }
 
 func (store *mongoStore) GetMessages(beginSeqNum, endSeqNum int) (msgs [][]byte, err error) {
+	if store.db == nil {
+		err = fmt.Errorf("mongoStore already closed")
+		return
+	}
 	msgFilter := generateMessageFilter(&store.sessionID)
 	//Marshal into database form
 	msgFilterBytes, err := bson.Marshal(msgFilter)

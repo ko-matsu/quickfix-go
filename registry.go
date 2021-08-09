@@ -3,6 +3,7 @@ package quickfix
 import (
 	"errors"
 	"sync"
+	"time"
 )
 
 var sessionsLock sync.RWMutex
@@ -55,7 +56,8 @@ func UnregisterSession(sessionID SessionID) error {
 	sessionsLock.Lock()
 	defer sessionsLock.Unlock()
 
-	if _, ok := sessions[sessionID]; ok {
+	if s, ok := sessions[sessionID]; ok {
+		registerStoppedSession(s)
 		delete(sessions, sessionID)
 		return nil
 	}
@@ -72,6 +74,7 @@ func registerSession(s *session) error {
 	}
 
 	sessions[s.sessionID] = s
+	unregisterStoppedSession(s.sessionID)
 	return nil
 }
 
@@ -90,7 +93,11 @@ const (
 	doNotLoggedOnSessionMessage = "session is not loggedOn"
 )
 
+// ErrDoNotLoggedOnSession defines no loggedOn session error.
 var ErrDoNotLoggedOnSession = errors.New(doNotLoggedOnSessionMessage)
+
+var stoppedSessionsLock sync.RWMutex
+var stoppedSessions = make(map[SessionID]*session)
 
 // ErrorBySessionID This struct has error map by sessionID.
 type ErrorBySessionID struct {
@@ -212,4 +219,80 @@ func WaitForLogon(sessionID SessionID) <-chan struct{} {
 		return session.notifyLogonEvent
 	}
 	return nil // fail case
+}
+
+// SendToSession This function send message on session.
+func SendToSession(m Messagable, sessionID SessionID) (err error) {
+	msg := m.ToMessage()
+	session, ok := lookupSession(sessionID)
+	if ok {
+		return session.queueForSend(msg)
+	}
+	session, ok = lookupStoppedSession(sessionID)
+	if ok {
+		return session.queueForSend(msg)
+	}
+	return errUnknownSession
+}
+
+func registerStoppedSession(s *session) {
+	if s.stoppedSessionKeepTime == 0 {
+		return
+	}
+
+	stoppedSessionsLock.Lock()
+	defer stoppedSessionsLock.Unlock()
+	deleteOldStoppedSession()
+
+	if oldSession, ok := stoppedSessions[s.sessionID]; ok {
+		delete(stoppedSessions, s.sessionID)
+		oldSession.close()
+	}
+	stoppedSessions[s.sessionID] = s
+}
+
+func unregisterStoppedSession(sessionID SessionID) {
+	stoppedSessionsLock.Lock()
+	defer stoppedSessionsLock.Unlock()
+	deleteOldStoppedSession()
+
+	if s, ok := stoppedSessions[sessionID]; ok {
+		delete(stoppedSessions, sessionID)
+		s.close()
+	}
+}
+
+func unregisterStoppedSessionAll() {
+	stoppedSessionsLock.Lock()
+	defer stoppedSessionsLock.Unlock()
+
+	for id, stoppedSession := range stoppedSessions {
+		stoppedSession.close()
+		delete(stoppedSessions, id)
+	}
+}
+
+func lookupStoppedSession(sessionID SessionID) (s *session, ok bool) {
+	stoppedSessionsLock.RLock()
+	defer stoppedSessionsLock.RUnlock()
+
+	s, ok = stoppedSessions[sessionID]
+	return
+}
+
+func deleteOldStoppedSession() { // in-file function
+	if len(stoppedSessions) == 0 {
+		return
+	}
+	currentTime := time.Now().UTC()
+	for id, stoppedSession := range stoppedSessions {
+		if stoppedSession.stoppedSessionKeepTime < 0 {
+			continue
+		}
+		diffTime := currentTime.Sub(stoppedSession.stopTime)
+		if diffTime > stoppedSession.stoppedSessionKeepTime {
+			stoppedSession.close()
+			delete(stoppedSessions, id)
+		}
+	}
 }

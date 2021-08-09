@@ -103,7 +103,7 @@ func (store *fileStore) Reset() error {
 		return errors.Wrap(err, "cache reset")
 	}
 
-	if err := store.close(); err != nil {
+	if err := store.closeInternal(); err != nil {
 		return errors.Wrap(err, "close")
 	}
 	if err := removeFile(store.bodyFname); err != nil {
@@ -134,7 +134,7 @@ func (store *fileStore) Refresh() (err error) {
 		return
 	}
 
-	if err = store.close(); err != nil {
+	if err = store.closeInternal(); err != nil {
 		return err
 	}
 
@@ -363,10 +363,10 @@ func (store *fileStore) GetMessages(beginSeqNum, endSeqNum int) ([][]byte, error
 // Close closes the store's files
 func (store *fileStore) Close() error {
 	store.isClosed = true
-	return store.close()
+	return store.closeInternal()
 }
 
-func (store *fileStore) close() error {
+func (store *fileStore) closeInternal() error {
 	if err := closeFile(store.bodyFile); err != nil {
 		return err
 	}

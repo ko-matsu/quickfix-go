@@ -124,6 +124,9 @@ func newSQLStore(sessionID SessionID, driver string, dataSourceName string, dbs 
 
 // Reset deletes the store records and sets the seqnums back to 1
 func (store *sqlStore) Reset() (err error) {
+	if store.db == nil {
+		return fmt.Errorf("sqlStore already closed")
+	}
 	s := store.sessionID
 	if err = store.db.Exec(`DELETE FROM messages
 		WHERE beginstring = ? AND session_qualifier = ?
@@ -159,6 +162,9 @@ func (store *sqlStore) Refresh() (err error) {
 }
 
 func (store *sqlStore) populateCache() (err error) {
+	if store.db == nil {
+		return fmt.Errorf("sqlStore already closed")
+	}
 	s := store.sessionID
 	var creationTime time.Time
 	var incomingSeqNum, outgoingSeqNum int
@@ -212,6 +218,9 @@ func (store *sqlStore) NextTargetMsgSeqNum() int {
 
 // SetNextSenderMsgSeqNum sets the next MsgSeqNum that will be sent
 func (store *sqlStore) SetNextSenderMsgSeqNum(next int) error {
+	if store.db == nil {
+		return fmt.Errorf("sqlStore already closed")
+	}
 	s := store.sessionID
 	if err := store.db.Exec(`UPDATE sessions SET outgoing_seqnum = ?
 		WHERE beginstring = ? AND session_qualifier = ?
@@ -227,6 +236,9 @@ func (store *sqlStore) SetNextSenderMsgSeqNum(next int) error {
 
 // SetNextTargetMsgSeqNum sets the next MsgSeqNum that should be received
 func (store *sqlStore) SetNextTargetMsgSeqNum(next int) error {
+	if store.db == nil {
+		return fmt.Errorf("sqlStore already closed")
+	}
 	s := store.sessionID
 	if err := store.db.Exec(`UPDATE sessions SET incoming_seqnum = ?
 		WHERE beginstring = ? AND session_qualifier = ?
@@ -258,6 +270,9 @@ func (store *sqlStore) CreationTime() time.Time {
 }
 
 func (store *sqlStore) SaveMessage(seqNum int, msg []byte) error {
+	if store.db == nil {
+		return fmt.Errorf("sqlStore already closed")
+	}
 	s := store.sessionID
 
 	return store.db.Exec(`INSERT INTO messages (
@@ -273,6 +288,9 @@ func (store *sqlStore) SaveMessage(seqNum int, msg []byte) error {
 }
 
 func (store *sqlStore) GetMessages(beginSeqNum, endSeqNum int) ([][]byte, error) {
+	if store.db == nil {
+		return nil, fmt.Errorf("sqlStore already closed")
+	}
 	s := store.sessionID
 	var msgs [][]byte
 	rows, err := store.db.Raw(`SELECT message FROM messages

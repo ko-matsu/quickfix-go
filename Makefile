@@ -31,7 +31,7 @@ lint:
 	golint .
 
 test: 
-	go test -v -cover . ./datadictionary ./internal
+	go test -v -cover -p=1 -count=1 . ./datadictionary ./internal
 
 _build_all: 
 	go build -v . ./config ./datadictionary ./enum ./field ./fix42 ./fix44 ./internal ./tag ./cmd/generate-fix ./cmd/generate-fix/internal

@@ -1,6 +1,7 @@
 package quickfix
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -37,6 +38,8 @@ type memoryStore struct {
 	senderMsgSeqNum, targetMsgSeqNum int
 	creationTime                     time.Time
 	messageMap                       map[int][]byte
+
+	isClosed bool
 }
 
 func (store *memoryStore) NextSenderMsgSeqNum() int {
@@ -58,10 +61,16 @@ func (store *memoryStore) IncrNextTargetMsgSeqNum() error {
 }
 
 func (store *memoryStore) SetNextSenderMsgSeqNum(nextSeqNum int) error {
+	if store.isClosed {
+		return fmt.Errorf("memoryStore already closed")
+	}
 	store.senderMsgSeqNum = nextSeqNum - 1
 	return nil
 }
 func (store *memoryStore) SetNextTargetMsgSeqNum(nextSeqNum int) error {
+	if store.isClosed {
+		return fmt.Errorf("memoryStore already closed")
+	}
 	store.targetMsgSeqNum = nextSeqNum - 1
 	return nil
 }
@@ -71,6 +80,9 @@ func (store *memoryStore) CreationTime() time.Time {
 }
 
 func (store *memoryStore) Reset() error {
+	if store.isClosed {
+		return fmt.Errorf("memoryStore already closed")
+	}
 	store.senderMsgSeqNum = 0
 	store.targetMsgSeqNum = 0
 	store.creationTime = time.Now()
@@ -79,16 +91,22 @@ func (store *memoryStore) Reset() error {
 }
 
 func (store *memoryStore) Refresh() error {
-	//nop, nothing to refresh
+	if store.isClosed {
+		return fmt.Errorf("memoryStore already closed")
+	}
 	return nil
 }
 
 func (store *memoryStore) Close() error {
 	//nop, nothing to close
+	store.isClosed = true
 	return nil
 }
 
 func (store *memoryStore) SaveMessage(seqNum int, msg []byte) error {
+	if store.isClosed {
+		return fmt.Errorf("memoryStore already closed")
+	}
 	if store.messageMap == nil {
 		store.messageMap = make(map[int][]byte)
 	}
@@ -98,6 +116,9 @@ func (store *memoryStore) SaveMessage(seqNum int, msg []byte) error {
 }
 
 func (store *memoryStore) GetMessages(beginSeqNum, endSeqNum int) ([][]byte, error) {
+	if store.isClosed {
+		return nil, fmt.Errorf("memoryStore already closed")
+	}
 	var msgs [][]byte
 	for seqNum := beginSeqNum; seqNum <= endSeqNum; seqNum++ {
 		if m, ok := store.messageMap[seqNum]; ok {

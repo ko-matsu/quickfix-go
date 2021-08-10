@@ -197,14 +197,13 @@ func (suite *MessageStoreTestSuite) TestMessageStore_Close_After() {
 
 	// check for panic
 	err := suite.msgStore.SetNextSenderMsgSeqNum(867)
-	require.Contains(t, err.Error(), "already closed")
+	require.Equal(t, err, ErrAccessToClosedStore)
 	err = suite.msgStore.SetNextTargetMsgSeqNum(5309)
-	require.Contains(t, err.Error(), "already closed")
+	require.Equal(t, err, ErrAccessToClosedStore)
 	_, err = suite.msgStore.GetMessages(0, 100)
-	require.Contains(t, err.Error(), "already closed")
-	// check for panic (not error check because fileStore is )
+	require.Equal(t, err, ErrAccessToClosedStore)
 	err = suite.msgStore.Refresh()
-	require.Contains(t, err.Error(), "already closed")
+	require.Equal(t, err, ErrAccessToClosedStore)
 	err = suite.msgStore.Reset()
-	require.Contains(t, err.Error(), "already closed")
+	require.Equal(t, err, ErrAccessToClosedStore)
 }

@@ -97,7 +97,7 @@ func newFileStore(sessionID SessionID, dirname string) (*fileStore, error) {
 // Reset deletes the store files and sets the seqnums back to 1
 func (store *fileStore) Reset() error {
 	if store.isClosed {
-		return fmt.Errorf("fileStore already closed")
+		return ErrAccessToClosedStore
 	}
 	if err := store.cache.Reset(); err != nil {
 		return errors.Wrap(err, "cache reset")
@@ -127,7 +127,7 @@ func (store *fileStore) Reset() error {
 // Refresh closes the store files and then reloads from them
 func (store *fileStore) Refresh() (err error) {
 	if store.isClosed {
-		return fmt.Errorf("fileStore already closed")
+		return ErrAccessToClosedStore
 	}
 	if err = store.cache.Reset(); err != nil {
 		err = errors.Wrap(err, "cache reset")
@@ -217,7 +217,7 @@ func (store *fileStore) populateCache() (creationTimePopulated bool, err error) 
 
 func (store *fileStore) setSession() error {
 	if store.isClosed || store.sessionFile == nil {
-		return fmt.Errorf("fileStore already closed")
+		return ErrAccessToClosedStore
 	}
 	if _, err := store.sessionFile.Seek(0, io.SeekStart); err != nil {
 		return fmt.Errorf("unable to rewind file: %s: %s", store.sessionFname, err.Error())
@@ -238,7 +238,7 @@ func (store *fileStore) setSession() error {
 
 func (store *fileStore) setSeqNum(f *os.File, seqNum int) error {
 	if store.isClosed || f == nil {
-		return fmt.Errorf("fileStore already closed")
+		return ErrAccessToClosedStore
 	}
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
 		return fmt.Errorf("unable to rewind file: %s: %s", f.Name(), err.Error())
@@ -301,7 +301,7 @@ func (store *fileStore) CreationTime() time.Time {
 
 func (store *fileStore) SaveMessage(seqNum int, msg []byte) error {
 	if store.isClosed || store.bodyFile == nil {
-		return fmt.Errorf("fileStore already closed")
+		return ErrAccessToClosedStore
 	}
 	offset, err := store.bodyFile.Seek(0, os.SEEK_END)
 	if err != nil {
@@ -330,7 +330,7 @@ func (store *fileStore) SaveMessage(seqNum int, msg []byte) error {
 
 func (store *fileStore) getMessage(seqNum int) (msg []byte, found bool, err error) {
 	if store.isClosed || store.bodyFile == nil {
-		err = fmt.Errorf("fileStore already closed")
+		err = ErrAccessToClosedStore
 		return
 	}
 	msgInfo, found := store.offsets[seqNum]

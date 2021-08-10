@@ -220,7 +220,7 @@ func (s *session) queueForSend(msg *Message) error {
 		return err
 	}
 	if s.Stopped() {
-		return ErrDoNotConnectedOnSession
+		return ErrSendToStoppedSession
 	}
 
 	s.toSend = append(s.toSend, msgBytes)
@@ -803,8 +803,8 @@ func (s *session) run() {
 
 // append API ------------------------------------------------------------------
 
-// ErrDoNotConnectedOnSession defines nothing connected session error.
-var ErrDoNotConnectedOnSession = errors.New("session is not connected")
+// ErrSendToStoppedSession defines error on sending to stopped session.
+var ErrSendToStoppedSession = errors.New("this session is stopped")
 
 func (s *session) close() {
 	s.sendMutex.Lock()

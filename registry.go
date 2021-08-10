@@ -52,30 +52,36 @@ func SendToTarget(m Messagable, sessionID SessionID) error {
 }
 
 //UnregisterSession removes a session from the set of known sessions
-func UnregisterSession(sessionID SessionID) error {
+func UnregisterSession(sessionID SessionID) (err error) {
 	sessionsLock.Lock()
-	defer sessionsLock.Unlock()
-
-	if s, ok := sessions[sessionID]; ok {
-		registerStoppedSession(s)
+	s, ok := sessions[sessionID]
+	if ok {
 		delete(sessions, sessionID)
-		return nil
+	} else {
+		err = errUnknownSession
 	}
+	sessionsLock.Unlock()
 
-	return errUnknownSession
+	if err == nil {
+		registerStoppedSession(s)
+	}
+	return
 }
 
-func registerSession(s *session) error {
+func registerSession(s *session) (err error) {
 	sessionsLock.Lock()
-	defer sessionsLock.Unlock()
-
-	if _, ok := sessions[s.sessionID]; ok {
-		return errDuplicateSessionID
+	_, ok := sessions[s.sessionID]
+	if ok {
+		err = errDuplicateSessionID
+	} else {
+		sessions[s.sessionID] = s
 	}
+	sessionsLock.Unlock()
 
-	sessions[s.sessionID] = s
-	unregisterStoppedSession(s.sessionID)
-	return nil
+	if err == nil {
+		unregisterStoppedSession(s.sessionID)
+	}
+	return
 }
 
 func lookupSession(sessionID SessionID) (s *session, ok bool) {
@@ -238,13 +244,16 @@ func SendToSession(m Messagable, sessionID SessionID) (err error) {
 }
 
 func registerStoppedSession(s *session) {
-	if isClosedStopeedSessions || s.stoppedSessionKeepTime == 0 {
+	if s == nil || s.stoppedSessionKeepTime == 0 {
 		return
 	}
 
 	stoppedSessionsLock.Lock()
 	defer stoppedSessionsLock.Unlock()
-	deleteOldStoppedSession()
+
+	if isClosedStopeedSessions {
+		return
+	}
 
 	if oldSession, ok := stoppedSessions[s.sessionID]; ok {
 		delete(stoppedSessions, s.sessionID)
@@ -256,7 +265,6 @@ func registerStoppedSession(s *session) {
 func unregisterStoppedSession(sessionID SessionID) {
 	stoppedSessionsLock.Lock()
 	defer stoppedSessionsLock.Unlock()
-	deleteOldStoppedSession()
 
 	if s, ok := stoppedSessions[sessionID]; ok {
 		delete(stoppedSessions, sessionID)
@@ -280,10 +288,27 @@ func lookupStoppedSession(sessionID SessionID) (s *session, ok bool) {
 	defer stoppedSessionsLock.RUnlock()
 
 	s, ok = stoppedSessions[sessionID]
+	if !ok || s.stoppedSessionKeepTime < 0 {
+		return
+	}
+
+	currentTime := time.Now().UTC()
+	diffTime := currentTime.Sub(s.stopTime)
+	if diffTime > s.stoppedSessionKeepTime {
+		s.close()
+		delete(stoppedSessions, s.sessionID)
+		s = nil
+		ok = false
+	}
 	return
 }
 
-func deleteOldStoppedSession() { // in-file function
+// CleanupInvalidStoppedSession deletes stopped sessions that has expired.
+// If using DynamicQualifier and DynamicStoppedSessionKeepTime, call this function periodically to close invalid sessions.
+func CleanupInvalidStoppedSession() {
+	stoppedSessionsLock.Lock()
+	defer stoppedSessionsLock.Unlock()
+
 	if len(stoppedSessions) == 0 {
 		return
 	}

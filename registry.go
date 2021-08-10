@@ -98,6 +98,7 @@ var ErrDoNotLoggedOnSession = errors.New(doNotLoggedOnSessionMessage)
 
 var stoppedSessionsLock sync.RWMutex
 var stoppedSessions = make(map[SessionID]*session)
+var isClosedStopeedSessions = false
 
 // ErrorBySessionID This struct has error map by sessionID.
 type ErrorBySessionID struct {
@@ -222,6 +223,7 @@ func WaitForLogon(sessionID SessionID) <-chan struct{} {
 }
 
 // SendToSession This function send message on session.
+// If the session is stopped, It just saves the message without sending it.
 func SendToSession(m Messagable, sessionID SessionID) (err error) {
 	msg := m.ToMessage()
 	session, ok := lookupSession(sessionID)
@@ -236,7 +238,7 @@ func SendToSession(m Messagable, sessionID SessionID) (err error) {
 }
 
 func registerStoppedSession(s *session) {
-	if s.stoppedSessionKeepTime == 0 {
+	if isClosedStopeedSessions || s.stoppedSessionKeepTime == 0 {
 		return
 	}
 
@@ -270,6 +272,7 @@ func unregisterStoppedSessionAll() {
 		stoppedSession.close()
 		delete(stoppedSessions, id)
 	}
+	isClosedStopeedSessions = true
 }
 
 func lookupStoppedSession(sessionID SessionID) (s *session, ok bool) {

@@ -375,7 +375,6 @@ LOOP:
 		case session, ok := <-a.dynamicSessionChan:
 			if !ok {
 				for _, oldSession := range sessions {
-					oldSession.stoppedSessionKeepTime = 0
 					oldSession.stop()
 				}
 				break LOOP

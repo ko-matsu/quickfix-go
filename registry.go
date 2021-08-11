@@ -3,6 +3,7 @@ package quickfix
 import (
 	"errors"
 	"sync"
+	"time"
 )
 
 var sessionsLock sync.RWMutex
@@ -51,28 +52,36 @@ func SendToTarget(m Messagable, sessionID SessionID) error {
 }
 
 //UnregisterSession removes a session from the set of known sessions
-func UnregisterSession(sessionID SessionID) error {
+func UnregisterSession(sessionID SessionID) (err error) {
 	sessionsLock.Lock()
-	defer sessionsLock.Unlock()
-
-	if _, ok := sessions[sessionID]; ok {
+	s, ok := sessions[sessionID]
+	if ok {
 		delete(sessions, sessionID)
-		return nil
+	} else {
+		err = errUnknownSession
 	}
+	sessionsLock.Unlock()
 
-	return errUnknownSession
+	if err == nil {
+		registerStoppedSession(s)
+	}
+	return
 }
 
-func registerSession(s *session) error {
+func registerSession(s *session) (err error) {
 	sessionsLock.Lock()
-	defer sessionsLock.Unlock()
-
-	if _, ok := sessions[s.sessionID]; ok {
-		return errDuplicateSessionID
+	_, ok := sessions[s.sessionID]
+	if ok {
+		err = errDuplicateSessionID
+	} else {
+		sessions[s.sessionID] = s
 	}
+	sessionsLock.Unlock()
 
-	sessions[s.sessionID] = s
-	return nil
+	if err == nil {
+		unregisterStoppedSession(s.sessionID)
+	}
+	return
 }
 
 func lookupSession(sessionID SessionID) (s *session, ok bool) {
@@ -90,7 +99,12 @@ const (
 	doNotLoggedOnSessionMessage = "session is not loggedOn"
 )
 
+// ErrDoNotLoggedOnSession defines no loggedOn session error.
 var ErrDoNotLoggedOnSession = errors.New(doNotLoggedOnSessionMessage)
+
+var stoppedSessionsLock sync.RWMutex
+var stoppedSessions = make(map[SessionID]*session)
+var isClosedStopeedSessions = false
 
 // ErrorBySessionID This struct has error map by sessionID.
 type ErrorBySessionID struct {
@@ -212,4 +226,101 @@ func WaitForLogon(sessionID SessionID) <-chan struct{} {
 		return session.notifyLogonEvent
 	}
 	return nil // fail case
+}
+
+// SendToSession This function send message on session.
+// If the session is stopped, It just saves the message without sending it.
+func SendToSession(m Messagable, sessionID SessionID) (err error) {
+	msg := m.ToMessage()
+	session, ok := lookupSession(sessionID)
+	if ok {
+		return session.queueForSend(msg)
+	}
+	session, ok = lookupStoppedSession(sessionID)
+	if ok {
+		return session.queueForSend(msg)
+	}
+	return errUnknownSession
+}
+
+func registerStoppedSession(s *session) {
+	if s == nil || s.stoppedSessionKeepTime == 0 {
+		return
+	}
+
+	stoppedSessionsLock.Lock()
+	defer stoppedSessionsLock.Unlock()
+
+	if isClosedStopeedSessions {
+		return
+	}
+
+	if oldSession, ok := stoppedSessions[s.sessionID]; ok {
+		delete(stoppedSessions, s.sessionID)
+		oldSession.close()
+	}
+	stoppedSessions[s.sessionID] = s
+}
+
+func unregisterStoppedSession(sessionID SessionID) {
+	stoppedSessionsLock.Lock()
+	defer stoppedSessionsLock.Unlock()
+
+	if s, ok := stoppedSessions[sessionID]; ok {
+		delete(stoppedSessions, sessionID)
+		s.close()
+	}
+}
+
+func unregisterStoppedSessionAll() {
+	stoppedSessionsLock.Lock()
+	defer stoppedSessionsLock.Unlock()
+
+	for id, stoppedSession := range stoppedSessions {
+		stoppedSession.close()
+		delete(stoppedSessions, id)
+	}
+	isClosedStopeedSessions = true
+}
+
+func lookupStoppedSession(sessionID SessionID) (s *session, ok bool) {
+	stoppedSessionsLock.RLock()
+	defer stoppedSessionsLock.RUnlock()
+
+	s, ok = stoppedSessions[sessionID]
+	if !ok || s.stoppedSessionKeepTime < 0 {
+		return
+	}
+
+	currentTime := time.Now().UTC()
+	diffTime := currentTime.Sub(s.stopTime)
+	if diffTime > s.stoppedSessionKeepTime {
+		s.close()
+		delete(stoppedSessions, s.sessionID)
+		s = nil
+		ok = false
+	}
+	return
+}
+
+// CleanupInvalidStoppedSession deletes stopped sessions that has expired.
+// If using DynamicQualifier and DynamicStoppedSessionKeepTime, call this function periodically to close invalid sessions.
+func CleanupInvalidStoppedSession() {
+	stoppedSessionsLock.Lock()
+	defer stoppedSessionsLock.Unlock()
+
+	if len(stoppedSessions) == 0 {
+		return
+	}
+	currentTime := time.Now().UTC()
+	for id, stoppedSession := range stoppedSessions {
+		if stoppedSession.stoppedSessionKeepTime < 0 {
+			continue
+		}
+		diffTime := currentTime.Sub(stoppedSession.stopTime)
+		if diffTime > stoppedSession.stoppedSessionKeepTime {
+			stoppedSession.close()
+			delete(stoppedSessions, id)
+		}
+	}
 }

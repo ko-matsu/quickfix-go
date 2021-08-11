@@ -47,7 +47,9 @@ type session struct {
 	timestampPrecision TimestampPrecision
 	linkedAcceptor     *Acceptor
 
-	notifyLogonEvent chan struct{}
+	notifyLogonEvent       chan struct{}
+	stoppedSessionKeepTime time.Duration
+	stopTime               time.Time
 }
 
 func (s *session) logError(err error) {
@@ -216,6 +218,9 @@ func (s *session) queueForSend(msg *Message) error {
 	msgBytes, err := s.prepMessageForSend(msg, nil)
 	if err != nil {
 		return err
+	}
+	if s.Stopped() {
+		return ErrSendToStoppedSession
 	}
 
 	s.toSend = append(s.toSend, msgBytes)
@@ -788,4 +793,25 @@ func (s *session) run() {
 			s.CheckSessionTime(s, now)
 		}
 	}
+
+	if s.stoppedSessionKeepTime == 0 {
+		s.close()
+	} else {
+		s.stopTime = time.Now().UTC()
+	}
+}
+
+// append API ------------------------------------------------------------------
+
+// ErrSendToStoppedSession defines error on sending to stopped session.
+var ErrSendToStoppedSession = errors.New("this session is stopped")
+
+func (s *session) close() {
+	s.sendMutex.Lock()
+	defer s.sendMutex.Unlock()
+	if s.store != nil {
+		s.store.Close()
+		s.store = nil
+	}
+	s.stoppedSessionKeepTime = 0
 }

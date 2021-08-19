@@ -109,6 +109,13 @@ func (store *memoryStore) SaveMessage(seqNum int, msg []byte) error {
 		store.messageMap = make(map[int][]byte)
 	}
 
+	// TODO(k-matsuzawa): Reconsider exclusionary control.
+	if _, ok := store.messageMap[seqNum]; ok {
+		return errors.New("unmatch sender seqnum")
+	}
+	if err := store.IncrNextSenderMsgSeqNum(); err != nil {
+		return err
+	}
 	store.messageMap[seqNum] = msg
 	return nil
 }

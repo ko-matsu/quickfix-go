@@ -4,15 +4,12 @@ import (
 	"errors"
 	"net"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/cryptogarageinc/quickfix-go/config"
 	"github.com/cryptogarageinc/quickfix-go/datadictionary"
 	"github.com/cryptogarageinc/quickfix-go/internal"
 )
-
-var sessionFactoryLock sync.RWMutex
 
 var dayLookup = map[string]time.Weekday{
 	"Sunday":    time.Sunday,
@@ -54,17 +51,13 @@ func (f sessionFactory) createSession(
 	logFactory LogFactory, application Application,
 ) (session *session, err error) {
 
-	sessionFactoryLock.RLock()
-	session, err = f.newSession(sessionID, storeFactory, settings, logFactory, application)
-	if err == nil {
-		err = registerSession(session)
-	}
-	sessionFactoryLock.RUnlock()
-
-	if err != nil {
+	if session, err = f.newSession(sessionID, storeFactory, settings, logFactory, application); err != nil {
 		return
 	}
 
+	if err = registerSession(session); err != nil {
+		return
+	}
 	application.OnCreate(session.sessionID)
 	session.log.OnEvent("Created session")
 
@@ -152,12 +145,6 @@ func (f sessionFactory) newSession(
 
 	if settings.HasSetting(config.ResetOnDisconnect) {
 		if s.ResetOnDisconnect, err = settings.BoolSetting(config.ResetOnDisconnect); err != nil {
-			return
-		}
-	}
-
-	if settings.HasSetting(config.EnableLastMsgSeqNumProcessed) {
-		if s.EnableLastMsgSeqNumProcessed, err = settings.BoolSetting(config.EnableLastMsgSeqNumProcessed); err != nil {
 			return
 		}
 	}
@@ -258,35 +245,8 @@ func (f sessionFactory) newSession(
 		}
 	}
 
-	if settings.HasSetting(config.TimeStampPrecision) {
-		var precisionStr string
-		if precisionStr, err = settings.Setting(config.TimeStampPrecision); err != nil {
-			return
-		}
-
-		switch precisionStr {
-		case "SECONDS":
-			s.timestampPrecision = Seconds
-		case "MILLIS":
-			s.timestampPrecision = Millis
-		case "MICROS":
-			s.timestampPrecision = Micros
-		case "NANOS":
-			s.timestampPrecision = Nanos
-
-		default:
-			err = IncorrectFormatForSetting{Setting: config.TimeStampPrecision, Value: precisionStr}
-			return
-		}
-	}
-
-	if settings.HasSetting(config.PersistMessages) {
-		var persistMessages bool
-		if persistMessages, err = settings.BoolSetting(config.PersistMessages); err != nil {
-			return
-		}
-
-		s.DisableMessagePersist = !persistMessages
+	if err = s.setMessageManagerSettings(settings); err != nil {
+		return
 	}
 
 	if f.BuildInitiators {
@@ -401,60 +361,4 @@ func (f sessionFactory) configureSocketConnectAddress(session *session, settings
 		session.SocketConnectAddress = append(session.SocketConnectAddress, net.JoinHostPort(socketConnectHost, socketConnectPort))
 		i++
 	}
-}
-
-// append API ------------------------------------------------------------------
-
-type sessionFactoryForStoreMessage struct {
-	sessionFactory
-	storeFactory MessageStoreFactory
-	logFactory   LogFactory
-	settings     *SessionSettings
-}
-
-func (f *sessionFactoryForStoreMessage) storeMessage(m Messagable, sessionID SessionID) (err error) {
-	sessionFactoryLock.Lock()
-	defer sessionFactoryLock.Unlock()
-	_, exist := lookupSession(sessionID)
-	if exist {
-		return ErrExistSession
-	}
-
-	appStub := applicationStub{}
-	sessionObj, err := f.newSession(sessionID, f.storeFactory, f.settings.clone(), f.logFactory, &appStub)
-	if err != nil {
-		return
-	}
-	defer sessionObj.close()
-	if err = sessionObj.storeMessage(m.ToMessage()); err != nil {
-		return
-	}
-	return
-}
-
-type applicationStub struct{}
-
-func (a applicationStub) OnCreate(sessionID SessionID) {
-	// do nothing
-}
-func (a applicationStub) OnLogon(sessionID SessionID) {
-	// do nothing
-}
-func (a applicationStub) OnLogout(sessionID SessionID) {
-	// do nothing
-}
-func (a applicationStub) ToAdmin(message *Message, sessionID SessionID) {
-	// do nothing
-}
-func (a applicationStub) ToApp(message *Message, sessionID SessionID) error {
-	// do nothing
-	return nil
-}
-func (a applicationStub) FromAdmin(message *Message, sessionID SessionID) MessageRejectError {
-	// do nothing
-	return nil
-}
-func (a applicationStub) FromApp(message *Message, sessionID SessionID) MessageRejectError {
-	// do nothing
-	return nil
 }

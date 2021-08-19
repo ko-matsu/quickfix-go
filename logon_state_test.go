@@ -93,7 +93,7 @@ func (s *LogonStateTestSuite) TestFixMsgInLogon() {
 }
 
 func (s *LogonStateTestSuite) TestFixMsgInLogonEnableLastMsgSeqNumProcessed() {
-	s.session.EnableLastMsgSeqNumProcessed = true
+	s.session.setEnableLastMsgSeqNumProcessed(true)
 
 	s.MessageFactory.SetNextSeqNum(2)
 	s.IncrNextSenderMsgSeqNum()

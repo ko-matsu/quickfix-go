@@ -198,8 +198,10 @@ func (s *SessionSuiteRig) Init() {
 	s.MessageFactory = MessageFactory{}
 	s.Receiver = newMockSessionReceiver()
 	s.session = &session{
-		sessionID:    SessionID{BeginString: "FIX.4.2", TargetCompID: "TW", SenderCompID: "ISLD"},
-		store:        &s.MockStore,
+		sessionID: SessionID{BeginString: "FIX.4.2", TargetCompID: "TW", SenderCompID: "ISLD"},
+		messageManager: messageManager{
+			store: &s.MockStore,
+		},
 		application:  &s.MockApp,
 		log:          nullLog{},
 		messageOut:   s.Receiver.sendChannel,

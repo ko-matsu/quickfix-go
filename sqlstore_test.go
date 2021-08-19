@@ -19,15 +19,15 @@ import (
 // SqlStoreTestSuite runs all tests in the MessageStoreTestSuite against the SqlStore implementation
 type SQLStoreTestSuite struct {
 	MessageStoreTestSuite
-	sqlStoreRootPath string
 }
 
 func (suite *SQLStoreTestSuite) SetupTest() {
-	suite.sqlStoreRootPath = path.Join(os.TempDir(), fmt.Sprintf("SqlStoreTestSuite-%d", os.Getpid()))
-	err := os.MkdirAll(suite.sqlStoreRootPath, os.ModePerm)
+	testName := suite.getTestName(suite.T())
+	sqlStoreRootPath := path.Join(suite.T().TempDir(), fmt.Sprintf("SqlStoreTestSuite-%s-%d", testName, os.Getpid()))
+	err := os.MkdirAll(sqlStoreRootPath, os.ModePerm)
 	require.Nil(suite.T(), err)
 	sqlDriver := "sqlite3"
-	sqlDsn := path.Join(suite.sqlStoreRootPath, fmt.Sprintf("%d.db", time.Now().UnixNano()))
+	sqlDsn := path.Join(sqlStoreRootPath, fmt.Sprintf("%d.db", time.Now().UnixNano()))
 
 	// create tables
 	db, err := gorm.Open(sqlDriver, sqlDsn)
@@ -40,6 +40,7 @@ func (suite *SQLStoreTestSuite) SetupTest() {
 		err = db.Exec(string(sqlBytes)).Error
 		require.Nil(suite.T(), err)
 	}
+	db.Close()
 
 	// create settings
 	sessionID := SessionID{BeginString: "FIX.4.4", SenderCompID: "SENDER", TargetCompID: "TARGET"}
@@ -47,9 +48,9 @@ func (suite *SQLStoreTestSuite) SetupTest() {
 [DEFAULT]
 SQLStoreDriver=%s
 SQLStoreDataSourceName=%s
-SQLStoreConnMaxLifetime=14400s
+SQLStoreConnMaxLifetime=60s
 SQLStoreConnMaxOpen=10
-SQLStoreConnMaxIdle=10
+SQLStoreConnMaxIdle=0
 
 [SESSION]
 BeginString=%s
@@ -64,7 +65,7 @@ TargetCompID=%s`, sqlDriver, sqlDsn, sessionID.BeginString, sessionID.SenderComp
 
 func (suite *SQLStoreTestSuite) TearDownTest() {
 	suite.msgStore.Close()
-	os.RemoveAll(suite.sqlStoreRootPath)
+	// os.RemoveAll(suite.getDirPath(suite.T()))
 }
 
 func TestSqlStoreTestSuite(t *testing.T) {

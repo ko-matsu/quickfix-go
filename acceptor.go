@@ -35,7 +35,6 @@ type Acceptor struct {
 	listeners             map[string]net.Listener
 	connectionValidator   ConnectionValidator
 	sessionFactory
-	sessionFactoryForStoreMessage
 
 	dynamicStoppedSessionKeepTime time.Duration
 }
@@ -164,11 +163,6 @@ func NewAcceptor(app Application, storeFactory MessageStoreFactory, settings *Se
 		sessions:        make(map[SessionID]*session),
 		sessionHostPort: make(map[SessionID]int),
 		listeners:       make(map[string]net.Listener),
-		sessionFactoryForStoreMessage: sessionFactoryForStoreMessage{
-			logFactory:   logFactory,
-			settings:     settings.GlobalSettings().clone(),
-			storeFactory: storeFactory,
-		},
 	}
 	if a.settings.GlobalSettings().HasSetting(config.DynamicSessions) {
 		if a.dynamicSessions, err = settings.globalSettings.BoolSetting(config.DynamicSessions); err != nil {
@@ -206,7 +200,10 @@ func NewAcceptor(app Application, storeFactory MessageStoreFactory, settings *Se
 		a.sessions[sessID].linkedAcceptor = a
 	}
 
-	storeMessageObject = &a.sessionFactoryForStoreMessage
+	storeMessageObject = &messageStoreAccessor{
+		storeFactory: storeFactory,
+		settings:     settings.globalSettings.clone(),
+	}
 	return
 }
 

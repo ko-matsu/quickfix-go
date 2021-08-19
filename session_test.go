@@ -880,7 +880,7 @@ func (suite *SessionSendTestSuite) TestSendNotLoggedOn() {
 
 func (suite *SessionSendTestSuite) TestSendEnableLastMsgSeqNumProcessed() {
 	suite.session.State = inSession{}
-	suite.session.EnableLastMsgSeqNumProcessed = true
+	suite.session.setEnableLastMsgSeqNumProcessed(true)
 
 	suite.Require().Nil(suite.session.store.SetNextTargetMsgSeqNum(45))
 
@@ -894,7 +894,7 @@ func (suite *SessionSendTestSuite) TestSendEnableLastMsgSeqNumProcessed() {
 
 func (suite *SessionSendTestSuite) TestSendDisableMessagePersist() {
 	suite.session.State = inSession{}
-	suite.session.DisableMessagePersist = true
+	suite.session.setDisableMessagePersist(true)
 
 	suite.MockApp.On("ToApp").Return(nil)
 	require.Nil(suite.T(), suite.send(suite.NewOrderSingle()))

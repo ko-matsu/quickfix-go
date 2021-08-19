@@ -7,6 +7,7 @@ import (
 
 	"github.com/cryptogarageinc/quickfix-go/config"
 	"github.com/jinzhu/gorm"
+	"github.com/pkg/errors"
 )
 
 type sqlStoreFactory struct {
@@ -275,16 +276,54 @@ func (store *sqlStore) SaveMessage(seqNum int, msg []byte) error {
 	}
 	s := store.sessionID
 
-	return store.db.Exec(`INSERT INTO messages (
+	err := store.db.Transaction(func(tx *gorm.DB) error {
+		var outgoingSeqNum int
+		row := tx.Raw(`SELECT outgoing_seqnum FROM sessions
+			WHERE beginstring = ? AND session_qualifier = ?
+			AND sendercompid = ? AND sendersubid = ? AND senderlocid = ?
+			AND targetcompid = ? AND targetsubid = ? AND targetlocid = ?`,
+			s.BeginString, s.Qualifier,
+			s.SenderCompID, s.SenderSubID, s.SenderLocationID,
+			s.TargetCompID, s.TargetSubID, s.TargetLocationID).Row()
+
+		if err := row.Scan(&outgoingSeqNum); err != nil {
+			return err
+		}
+		nextSeqNum := outgoingSeqNum
+		if seqNum != nextSeqNum {
+			return errors.Errorf("unmatch sender seqnum: %d, %d", seqNum, nextSeqNum)
+		}
+		nextSeqNum++
+
+		if err := tx.Exec(`INSERT INTO messages (
 			msgseqnum, message,
 			beginstring, session_qualifier,
 			sendercompid, sendersubid, senderlocid,
 			targetcompid, targetsubid, targetlocid)
 			VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		seqNum, string(msg),
-		s.BeginString, s.Qualifier,
-		s.SenderCompID, s.SenderSubID, s.SenderLocationID,
-		s.TargetCompID, s.TargetSubID, s.TargetLocationID).Error
+			seqNum, string(msg),
+			s.BeginString, s.Qualifier,
+			s.SenderCompID, s.SenderSubID, s.SenderLocationID,
+			s.TargetCompID, s.TargetSubID, s.TargetLocationID).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Exec(`UPDATE sessions SET outgoing_seqnum = ?
+			WHERE beginstring = ? AND session_qualifier = ?
+			AND sendercompid = ? AND sendersubid = ? AND senderlocid = ?
+			AND targetcompid = ? AND targetsubid = ? AND targetlocid = ?`,
+			nextSeqNum, s.BeginString, s.Qualifier,
+			s.SenderCompID, s.SenderSubID, s.SenderLocationID,
+			s.TargetCompID, s.TargetSubID, s.TargetLocationID).Error; err != nil {
+			return err
+		}
+		store.cache.SetNextSenderMsgSeqNum(nextSeqNum)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (store *sqlStore) GetMessages(beginSeqNum, endSeqNum int) ([][]byte, error) {

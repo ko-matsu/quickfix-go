@@ -7,16 +7,25 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cryptogarageinc/quickfix-go/config"
 	"github.com/cryptogarageinc/quickfix-go/datadictionary"
 	"github.com/cryptogarageinc/quickfix-go/internal"
 )
 
+type messageManager struct {
+	store                        MessageStore
+	timestampPrecision           TimestampPrecision
+	enableLastMsgSeqNumProcessed bool
+	disableMessagePersist        bool
+}
+
 //The Session is the primary FIX abstraction for message communication
 type session struct {
-	store MessageStore
+	messageManager
 
-	log       Log
 	sessionID SessionID
+
+	log Log
 
 	messageOut chan<- []byte
 	messageIn  <-chan fixIn
@@ -44,8 +53,7 @@ type session struct {
 	appDataDictionary       *datadictionary.DataDictionary
 
 	messagePool
-	timestampPrecision TimestampPrecision
-	linkedAcceptor     *Acceptor
+	linkedAcceptor *Acceptor
 
 	notifyLogonEvent       chan struct{}
 	stoppedSessionKeepTime time.Duration
@@ -98,9 +106,13 @@ func (s *session) waitForInSessionTime() {
 }
 
 func (s *session) insertSendingTime(msg *Message) {
+	s.messageManager.insertSendingTime(msg, s.sessionID)
+}
+
+func (s *messageManager) insertSendingTime(msg *Message, sessionID SessionID) {
 	sendingTime := time.Now().UTC()
 
-	if s.sessionID.BeginString >= BeginStringFIX42 {
+	if sessionID.BeginString >= BeginStringFIX42 {
 		msg.Header.SetField(tagSendingTime, FIXUTCTimestamp{Time: sendingTime, Precision: s.timestampPrecision})
 	} else {
 		msg.Header.SetField(tagSendingTime, FIXUTCTimestamp{Time: sendingTime, Precision: Seconds})
@@ -114,28 +126,36 @@ func optionallySetID(msg *Message, field Tag, value string) {
 }
 
 func (s *session) fillDefaultHeader(msg *Message, inReplyTo *Message) {
-	msg.Header.SetString(tagBeginString, s.sessionID.BeginString)
-	msg.Header.SetString(tagSenderCompID, s.sessionID.SenderCompID)
-	optionallySetID(msg, tagSenderSubID, s.sessionID.SenderSubID)
-	optionallySetID(msg, tagSenderLocationID, s.sessionID.SenderLocationID)
+	err := s.messageManager.fillDefaultHeader(msg, inReplyTo, s.sessionID)
+	if err != nil {
+		s.logError(err)
+	}
+}
 
-	msg.Header.SetString(tagTargetCompID, s.sessionID.TargetCompID)
-	optionallySetID(msg, tagTargetSubID, s.sessionID.TargetSubID)
-	optionallySetID(msg, tagTargetLocationID, s.sessionID.TargetLocationID)
+func (s *messageManager) fillDefaultHeader(msg *Message, inReplyTo *Message, sessionID SessionID) error {
+	msg.Header.SetString(tagBeginString, sessionID.BeginString)
+	msg.Header.SetString(tagSenderCompID, sessionID.SenderCompID)
+	optionallySetID(msg, tagSenderSubID, sessionID.SenderSubID)
+	optionallySetID(msg, tagSenderLocationID, sessionID.SenderLocationID)
 
-	s.insertSendingTime(msg)
+	msg.Header.SetString(tagTargetCompID, sessionID.TargetCompID)
+	optionallySetID(msg, tagTargetSubID, sessionID.TargetSubID)
+	optionallySetID(msg, tagTargetLocationID, sessionID.TargetLocationID)
 
-	if s.EnableLastMsgSeqNumProcessed {
+	s.insertSendingTime(msg, sessionID)
+
+	if s.enableLastMsgSeqNumProcessed {
 		if inReplyTo != nil {
-			if lastSeqNum, err := inReplyTo.Header.GetInt(tagMsgSeqNum); err != nil {
-				s.logError(err)
-			} else {
-				msg.Header.SetInt(tagLastMsgSeqNumProcessed, lastSeqNum)
+			lastSeqNum, err := inReplyTo.Header.GetInt(tagMsgSeqNum)
+			if err != nil {
+				return err
 			}
+			msg.Header.SetInt(tagLastMsgSeqNumProcessed, lastSeqNum)
 		} else {
 			msg.Header.SetInt(tagLastMsgSeqNumProcessed, s.store.NextTargetMsgSeqNum()-1)
 		}
 	}
+	return nil
 }
 
 func (s *session) shouldSendReset() bool {
@@ -286,8 +306,38 @@ func (s *session) dropAndSendInReplyTo(msg *Message, inReplyTo *Message) error {
 }
 
 func (s *session) prepMessageForSend(msg *Message, inReplyTo *Message) (msgBytes []byte, err error) {
-	s.fillDefaultHeader(msg, inReplyTo)
-	seqNum := s.store.NextSenderMsgSeqNum()
+	sentReset, seqNum, msgBytes, err := s.buildMessage(msg, inReplyTo, s.sessionID, &s.application, &s.log)
+	if sentReset {
+		s.sentReset = sentReset
+	}
+	if err != nil {
+		return
+	}
+
+	if err = s.persist(seqNum, msgBytes, s.DisableMessagePersist); err != nil {
+		_ = s.store.Refresh()
+		if seqNum == s.store.NextSenderMsgSeqNum() {
+			return
+		}
+		// retry
+		sentReset, seqNum, msgBytes, err = s.buildMessage(msg, inReplyTo, s.sessionID, &s.application, &s.log)
+		if sentReset {
+			s.sentReset = sentReset
+		}
+		if err != nil {
+			return
+		}
+		err = s.persist(seqNum, msgBytes, s.DisableMessagePersist)
+	}
+	return
+}
+
+func (s *messageManager) buildMessage(msg *Message, inReplyTo *Message, sessionID SessionID, application *Application, logger *Log) (sentReset bool, seqNum int, msgBytes []byte, err error) {
+	tmpErr := s.fillDefaultHeader(msg, inReplyTo, sessionID)
+	if tmpErr != nil && logger != nil {
+		(*logger).OnEvent(err.Error())
+	}
+	seqNum = s.store.NextSenderMsgSeqNum()
 	msg.Header.SetField(tagMsgSeqNum, FIXInt(seqNum))
 
 	msgType, err := msg.Header.GetBytes(tagMsgType)
@@ -296,7 +346,9 @@ func (s *session) prepMessageForSend(msg *Message, inReplyTo *Message) (msgBytes
 	}
 
 	if isAdminMessageType(msgType) {
-		s.application.ToAdmin(msg, s.sessionID)
+		if application != nil {
+			(*application).ToAdmin(msg, sessionID)
+		}
 
 		if bytes.Equal(msgType, msgTypeLogon) {
 			var resetSeqNumFlag FIXBoolean
@@ -311,31 +363,29 @@ func (s *session) prepMessageForSend(msg *Message, inReplyTo *Message) (msgBytes
 					return
 				}
 
-				s.sentReset = true
+				sentReset = true
 				seqNum = s.store.NextSenderMsgSeqNum()
 				msg.Header.SetField(tagMsgSeqNum, FIXInt(seqNum))
 			}
 		}
-	} else {
-		if err = s.application.ToApp(msg, s.sessionID); err != nil {
+	} else if application != nil {
+		if err = (*application).ToApp(msg, sessionID); err != nil {
 			return
 		}
 	}
 
 	msgBytes = msg.build()
-	err = s.persist(seqNum, msgBytes)
 
 	return
 }
 
-func (s *session) persist(seqNum int, msgBytes []byte) error {
-	if !s.DisableMessagePersist {
-		if err := s.store.SaveMessage(seqNum, msgBytes); err != nil {
-			return err
-		}
+func (s *messageManager) persist(seqNum int, msgBytes []byte, disableMessagePersist bool) (err error) {
+	if !disableMessagePersist {
+		err = s.store.SaveMessage(seqNum, msgBytes)
+	} else {
+		err = s.store.IncrNextSenderMsgSeqNum()
 	}
-
-	return s.store.IncrNextSenderMsgSeqNum()
+	return
 }
 
 func (s *session) sendQueued() {
@@ -801,6 +851,65 @@ func (s *session) run() {
 	}
 }
 
+func (s *session) setMessageManagerSettings(settings *SessionSettings) (err error) {
+	err = s.messageManager.setMessageManagerSettings(settings)
+	if err != nil {
+		return
+	}
+	s.setEnableLastMsgSeqNumProcessed(s.enableLastMsgSeqNumProcessed)
+	s.setDisableMessagePersist(s.disableMessagePersist)
+	return
+}
+
+func (s *session) setEnableLastMsgSeqNumProcessed(enableLastMsgSeqNumProcessed bool) {
+	s.EnableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed
+	s.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed
+}
+
+func (s *session) setDisableMessagePersist(disableMessagePersist bool) {
+	s.DisableMessagePersist = disableMessagePersist
+	s.disableMessagePersist = disableMessagePersist
+}
+
+func (s *messageManager) setMessageManagerSettings(settings *SessionSettings) (err error) {
+	if settings.HasSetting(config.EnableLastMsgSeqNumProcessed) {
+		if s.enableLastMsgSeqNumProcessed, err = settings.BoolSetting(config.EnableLastMsgSeqNumProcessed); err != nil {
+			return
+		}
+	}
+
+	if settings.HasSetting(config.PersistMessages) {
+		var persistMessages bool
+		if persistMessages, err = settings.BoolSetting(config.PersistMessages); err != nil {
+			return
+		}
+
+		s.disableMessagePersist = !persistMessages
+	}
+	if settings.HasSetting(config.TimeStampPrecision) {
+		var precisionStr string
+		if precisionStr, err = settings.Setting(config.TimeStampPrecision); err != nil {
+			return
+		}
+
+		switch precisionStr {
+		case "SECONDS":
+			s.timestampPrecision = Seconds
+		case "MILLIS":
+			s.timestampPrecision = Millis
+		case "MICROS":
+			s.timestampPrecision = Micros
+		case "NANOS":
+			s.timestampPrecision = Nanos
+
+		default:
+			err = IncorrectFormatForSetting{Setting: config.TimeStampPrecision, Value: precisionStr}
+			return
+		}
+	}
+	return
+}
+
 // append API ------------------------------------------------------------------
 
 // ErrSendToStoppedSession defines error on sending to stopped session.
@@ -816,9 +925,58 @@ func (s *session) close() {
 	s.stoppedSessionKeepTime = 0
 }
 
-func (s *session) storeMessage(msg *Message) error {
-	s.sendMutex.Lock()
-	defer s.sendMutex.Unlock()
-	_, err := s.prepMessageForSend(msg, nil)
-	return err
+type messageStoreAccessor struct {
+	storeFactory MessageStoreFactory
+	settings     *SessionSettings
+}
+
+func (f *messageStoreAccessor) storeMessage(m Messagable, sessionID SessionID) (err error) {
+	_, exist := lookupSession(sessionID)
+	if exist {
+		return ErrExistSession
+	}
+	store, err := f.storeFactory.Create(sessionID)
+	if err != nil {
+		return err
+	}
+	defer store.Close()
+
+	msgSender := messageManager{store: store}
+	if err = msgSender.setMessageManagerSettings(f.settings); err != nil {
+		return
+	}
+	if msgSender.disableMessagePersist {
+		return errors.New("PersistMessages is N. store not supported")
+	}
+
+	msg := m.ToMessage()
+	msgType, err := msg.Header.GetBytes(tagMsgType)
+	if err != nil {
+		return
+	} else if isAdminMessageType(msgType) {
+		return errors.New("admin message not supported")
+	}
+
+	// create message header
+	_, seqNum, msgBytes, err := msgSender.buildMessage(msg, nil, sessionID, nil, nil)
+	if err != nil {
+		return
+	}
+
+	if err = store.SaveMessage(seqNum, msgBytes); err != nil {
+		// retry
+		_, exist := lookupSession(sessionID)
+		if exist {
+			return ErrExistSession
+		}
+		if err = msgSender.store.Refresh(); err != nil {
+			return
+		}
+		_, seqNum, msgBytes, err = msgSender.buildMessage(msg, nil, sessionID, nil, nil)
+		if err != nil {
+			return
+		}
+		err = store.SaveMessage(seqNum, msgBytes)
+	}
+	return
 }

@@ -303,6 +303,12 @@ func (store *fileStore) SaveMessage(seqNum int, msg []byte) error {
 	if store.isClosed || store.bodyFile == nil {
 		return ErrAccessToClosedStore
 	}
+
+	if _, ok := store.offsets[seqNum]; ok {
+		return errors.New("unmatch sender seqnum")
+	}
+	// TODO(k-matsuzawa): Reconsider exclusionary control.
+
 	offset, err := store.bodyFile.Seek(0, os.SEEK_END)
 	if err != nil {
 		return fmt.Errorf("unable to seek to end of file: %s: %s", store.bodyFname, err.Error())
@@ -323,6 +329,10 @@ func (store *fileStore) SaveMessage(seqNum int, msg []byte) error {
 		return fmt.Errorf("unable to flush file: %s: %s", store.bodyFname, err.Error())
 	}
 	if err := store.headerFile.Sync(); err != nil {
+		return fmt.Errorf("unable to flush file: %s: %s", store.headerFname, err.Error())
+	}
+
+	if err := store.IncrNextSenderMsgSeqNum(); err != nil {
 		return fmt.Errorf("unable to flush file: %s: %s", store.headerFname, err.Error())
 	}
 	return nil

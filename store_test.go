@@ -1,6 +1,7 @@
 package quickfix
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -13,6 +14,11 @@ import (
 type MessageStoreTestSuite struct {
 	suite.Suite
 	msgStore MessageStore
+}
+
+func (suite *MessageStoreTestSuite) getTestName(t *testing.T) string {
+	testNames := strings.Split(t.Name(), "/")
+	return testNames[len(testNames)-1]
 }
 
 // MemoryStoreTestSuite runs all tests in the MessageStoreTestSuite against the MemoryStore implementation
@@ -38,7 +44,7 @@ func (suite *MessageStoreTestSuite) TestMessageStore_SetNextMsgSeqNum_Refresh_In
 	require.Nil(t, suite.msgStore.SetNextTargetMsgSeqNum(5309))
 
 	// When the store is refreshed from its backing store
-	suite.msgStore.Refresh()
+	require.Nil(t, suite.msgStore.Refresh())
 
 	// Then the sender and target seqnums should still be
 	assert.Equal(t, 867, suite.msgStore.NextSenderMsgSeqNum())
@@ -53,7 +59,7 @@ func (suite *MessageStoreTestSuite) TestMessageStore_SetNextMsgSeqNum_Refresh_In
 	assert.Equal(t, 5310, suite.msgStore.NextTargetMsgSeqNum())
 
 	// When the store is refreshed from its backing store
-	suite.msgStore.Refresh()
+	require.Nil(t, suite.msgStore.Refresh())
 
 	// Then the sender and target seqnums should still be
 	assert.Equal(t, 868, suite.msgStore.NextSenderMsgSeqNum())
@@ -64,8 +70,8 @@ func (suite *MessageStoreTestSuite) TestMessageStore_Reset() {
 	t := suite.T()
 
 	// Given a MessageStore with the following sender and target seqnums
-	suite.msgStore.SetNextSenderMsgSeqNum(1234)
-	suite.msgStore.SetNextTargetMsgSeqNum(5678)
+	require.Nil(t, suite.msgStore.SetNextSenderMsgSeqNum(1234))
+	require.Nil(t, suite.msgStore.SetNextTargetMsgSeqNum(5678))
 
 	// When the store is reset
 	require.Nil(t, suite.msgStore.Reset())
@@ -86,27 +92,27 @@ func (suite *MessageStoreTestSuite) TestMessageStore_SaveMessage_GetMessage() {
 	t := suite.T()
 
 	// Given the following saved messages
-	expectedMsgsBySeqNum := map[int]string{
-		1: "In the frozen land of Nador",
-		2: "they were forced to eat Robin's minstrels",
-		3: "and there was much rejoicing",
+	expectedMsgsBySeqNum := []string{
+		"In the frozen land of Nador",
+		"they were forced to eat Robin's minstrels",
+		"and there was much rejoicing",
 	}
-	for seqNum, msg := range expectedMsgsBySeqNum {
+	for i, msg := range expectedMsgsBySeqNum {
+		seqNum := i + 1
 		require.Nil(t, suite.msgStore.SaveMessage(seqNum, []byte(msg)))
 	}
-
 	// When the messages are retrieved from the MessageStore
 	actualMsgs, err := suite.msgStore.GetMessages(1, 3)
 	require.Nil(t, err)
 
 	// Then the messages should be
 	require.Len(t, actualMsgs, 3)
-	assert.Equal(t, expectedMsgsBySeqNum[1], string(actualMsgs[0]))
-	assert.Equal(t, expectedMsgsBySeqNum[2], string(actualMsgs[1]))
-	assert.Equal(t, expectedMsgsBySeqNum[3], string(actualMsgs[2]))
+	assert.Equal(t, expectedMsgsBySeqNum[0], string(actualMsgs[0]))
+	assert.Equal(t, expectedMsgsBySeqNum[1], string(actualMsgs[1]))
+	assert.Equal(t, expectedMsgsBySeqNum[2], string(actualMsgs[2]))
 
 	// When the store is refreshed from its backing store
-	suite.msgStore.Refresh()
+	require.Nil(t, suite.msgStore.Refresh())
 
 	// And the messages are retrieved from the MessageStore
 	actualMsgs, err = suite.msgStore.GetMessages(1, 3)
@@ -114,9 +120,9 @@ func (suite *MessageStoreTestSuite) TestMessageStore_SaveMessage_GetMessage() {
 
 	// Then the messages should still be
 	require.Len(t, actualMsgs, 3)
-	assert.Equal(t, expectedMsgsBySeqNum[1], string(actualMsgs[0]))
-	assert.Equal(t, expectedMsgsBySeqNum[2], string(actualMsgs[1]))
-	assert.Equal(t, expectedMsgsBySeqNum[3], string(actualMsgs[2]))
+	assert.Equal(t, expectedMsgsBySeqNum[0], string(actualMsgs[0]))
+	assert.Equal(t, expectedMsgsBySeqNum[1], string(actualMsgs[1]))
+	assert.Equal(t, expectedMsgsBySeqNum[2], string(actualMsgs[2]))
 }
 
 func (suite *MessageStoreTestSuite) TestMessageStore_GetMessages_EmptyStore() {
@@ -164,28 +170,47 @@ func (suite *MessageStoreTestSuite) TestMessageStore_GetMessages_VariousRanges()
 }
 
 func (suite *MessageStoreTestSuite) TestMessageStore_CreationTime() {
+	require.Nil(suite.T(), suite.msgStore.Reset())
 	assert.False(suite.T(), suite.msgStore.CreationTime().IsZero())
 
 	// This test will be called multiple times in parallel.
 	t0 := time.Now()
 	time.Sleep(time.Second * 2)
-	suite.msgStore.Reset()
+	require.Nil(suite.T(), suite.msgStore.Reset())
 	time.Sleep(time.Second * 2)
 	t1 := time.Now()
 	require.True(suite.T(), suite.msgStore.CreationTime().After(t0))
 	require.True(suite.T(), suite.msgStore.CreationTime().Before(t1))
 }
 
-func (suite *MessageStoreTestSuite) TestMessageStore_Close_After() {
+func (suite *MessageStoreTestSuite) TestMessageStore_SaveMessage_IncrNextSenderMsgSeqNum() {
 	t := suite.T()
 
 	// Given the following saved messages
-	expectedMsgsBySeqNum := map[int]string{
-		1: "In the frozen land of Nador",
-		2: "they were forced to eat Robin's minstrels",
-		3: "and there was much rejoicing",
+	expectedMsgsBySeqNum := []string{
+		"In the frozen land of Nador",
+		"they were forced to eat Robin's minstrels",
+		"and there was much rejoicing",
 	}
-	for seqNum, msg := range expectedMsgsBySeqNum {
+	for i, msg := range expectedMsgsBySeqNum {
+		seqNum := i + 1
+		require.Nil(t, suite.msgStore.SaveMessage(seqNum, []byte(msg)))
+	}
+	assert.Equal(t, 4, suite.msgStore.NextSenderMsgSeqNum())
+}
+
+func (suite *MessageStoreTestSuite) TestMessageStore_Close_After() {
+	t := suite.T()
+	require.Nil(suite.T(), suite.msgStore.Reset())
+
+	// Given the following saved messages
+	expectedMsgsBySeqNum := []string{
+		"In the frozen land of Nador",
+		"they were forced to eat Robin's minstrels",
+		"and there was much rejoicing",
+	}
+	for i, msg := range expectedMsgsBySeqNum {
+		seqNum := i + 1
 		require.Nil(t, suite.msgStore.SaveMessage(seqNum, []byte(msg)))
 	}
 
@@ -193,7 +218,7 @@ func (suite *MessageStoreTestSuite) TestMessageStore_Close_After() {
 	require.Nil(t, suite.msgStore.SetNextSenderMsgSeqNum(867))
 	require.Nil(t, suite.msgStore.SetNextTargetMsgSeqNum(5309))
 
-	suite.msgStore.Close()
+	require.Nil(suite.T(), suite.msgStore.Close())
 
 	// check for panic
 	err := suite.msgStore.SetNextSenderMsgSeqNum(867)

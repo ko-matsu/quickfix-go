@@ -38,7 +38,7 @@ TargetCompID=%s`, mongoDbCxn, mongoDatabase, sessionID.BeginString, sessionID.Se
 	require.Nil(suite.T(), err)
 
 	// create store
-	suite.msgStore, err = NewMongoStoreFactory(settings).Create(sessionID)
+	suite.msgStore, err = NewMongoStoreFactoryPrefixed(settings, suite.getTestName(suite.T())).Create(sessionID)
 	require.Nil(suite.T(), err)
 	err = suite.msgStore.Reset()
 	require.Nil(suite.T(), err)

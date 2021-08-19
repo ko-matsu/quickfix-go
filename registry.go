@@ -8,7 +8,11 @@ import (
 
 var sessionsLock sync.RWMutex
 var sessions = make(map[SessionID]*session)
+
+// ErrDuplicateSessionID defines duplicate SessionID
 var ErrDuplicateSessionID = errors.New("duplicate SessionID")
+
+// ErrUnknownSession defines unknown session
 var ErrUnknownSession = errors.New("unknown session")
 
 //Messagable is a Message or something that can be converted to a Message
@@ -108,7 +112,7 @@ var ErrExistSession = errors.New("exist session")
 var stoppedSessionsLock sync.RWMutex
 var stoppedSessions = make(map[SessionID]*session)
 var isClosedStopeedSessions = false
-var storeMessageObject *sessionFactoryForStoreMessage
+var storeMessageObject *messageStoreAccessor
 
 // ErrorBySessionID This struct has error map by sessionID.
 type ErrorBySessionID struct {

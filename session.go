@@ -815,3 +815,10 @@ func (s *session) close() {
 	}
 	s.stoppedSessionKeepTime = 0
 }
+
+func (s *session) storeMessage(msg *Message) error {
+	s.sendMutex.Lock()
+	defer s.sendMutex.Unlock()
+	_, err := s.prepMessageForSend(msg, nil)
+	return err
+}

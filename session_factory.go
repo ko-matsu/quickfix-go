@@ -4,12 +4,15 @@ import (
 	"errors"
 	"net"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/cryptogarageinc/quickfix-go/config"
 	"github.com/cryptogarageinc/quickfix-go/datadictionary"
 	"github.com/cryptogarageinc/quickfix-go/internal"
 )
+
+var sessionFactoryLock sync.RWMutex
 
 var dayLookup = map[string]time.Weekday{
 	"Sunday":    time.Sunday,
@@ -51,13 +54,17 @@ func (f sessionFactory) createSession(
 	logFactory LogFactory, application Application,
 ) (session *session, err error) {
 
-	if session, err = f.newSession(sessionID, storeFactory, settings, logFactory, application); err != nil {
+	sessionFactoryLock.RLock()
+	session, err = f.newSession(sessionID, storeFactory, settings, logFactory, application)
+	if err == nil {
+		err = registerSession(session)
+	}
+	sessionFactoryLock.RUnlock()
+
+	if err != nil {
 		return
 	}
 
-	if err = registerSession(session); err != nil {
-		return
-	}
 	application.OnCreate(session.sessionID)
 	session.log.OnEvent("Created session")
 
@@ -394,4 +401,60 @@ func (f sessionFactory) configureSocketConnectAddress(session *session, settings
 		session.SocketConnectAddress = append(session.SocketConnectAddress, net.JoinHostPort(socketConnectHost, socketConnectPort))
 		i++
 	}
+}
+
+// append API ------------------------------------------------------------------
+
+type sessionFactoryForStoreMessage struct {
+	sessionFactory
+	storeFactory MessageStoreFactory
+	logFactory   LogFactory
+	settings     *SessionSettings
+}
+
+func (f *sessionFactoryForStoreMessage) storeMessage(m Messagable, sessionID SessionID) (err error) {
+	sessionFactoryLock.Lock()
+	defer sessionFactoryLock.Unlock()
+	_, exist := lookupSession(sessionID)
+	if exist {
+		return ErrExistSession
+	}
+
+	appStub := applicationStub{}
+	sessionObj, err := f.newSession(sessionID, f.storeFactory, f.settings.clone(), f.logFactory, &appStub)
+	if err != nil {
+		return
+	}
+	defer sessionObj.close()
+	if err = sessionObj.storeMessage(m.ToMessage()); err != nil {
+		return
+	}
+	return
+}
+
+type applicationStub struct{}
+
+func (a applicationStub) OnCreate(sessionID SessionID) {
+	// do nothing
+}
+func (a applicationStub) OnLogon(sessionID SessionID) {
+	// do nothing
+}
+func (a applicationStub) OnLogout(sessionID SessionID) {
+	// do nothing
+}
+func (a applicationStub) ToAdmin(message *Message, sessionID SessionID) {
+	// do nothing
+}
+func (a applicationStub) ToApp(message *Message, sessionID SessionID) error {
+	// do nothing
+	return nil
+}
+func (a applicationStub) FromAdmin(message *Message, sessionID SessionID) MessageRejectError {
+	// do nothing
+	return nil
+}
+func (a applicationStub) FromApp(message *Message, sessionID SessionID) MessageRejectError {
+	// do nothing
+	return nil
 }

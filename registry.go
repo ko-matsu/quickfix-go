@@ -8,8 +8,8 @@ import (
 
 var sessionsLock sync.RWMutex
 var sessions = make(map[SessionID]*session)
-var errDuplicateSessionID = errors.New("Duplicate SessionID")
-var errUnknownSession = errors.New("Unknown session")
+var ErrDuplicateSessionID = errors.New("duplicate SessionID")
+var ErrUnknownSession = errors.New("unknown session")
 
 //Messagable is a Message or something that can be converted to a Message
 type Messagable interface {
@@ -45,7 +45,7 @@ func SendToTarget(m Messagable, sessionID SessionID) error {
 	msg := m.ToMessage()
 	session, ok := lookupSession(sessionID)
 	if !ok {
-		return errUnknownSession
+		return ErrUnknownSession
 	}
 
 	return session.queueForSend(msg)
@@ -58,7 +58,7 @@ func UnregisterSession(sessionID SessionID) (err error) {
 	if ok {
 		delete(sessions, sessionID)
 	} else {
-		err = errUnknownSession
+		err = ErrUnknownSession
 	}
 	sessionsLock.Unlock()
 
@@ -72,7 +72,7 @@ func registerSession(s *session) (err error) {
 	sessionsLock.Lock()
 	_, ok := sessions[s.sessionID]
 	if ok {
-		err = errDuplicateSessionID
+		err = ErrDuplicateSessionID
 	} else {
 		sessions[s.sessionID] = s
 	}
@@ -102,9 +102,13 @@ const (
 // ErrDoNotLoggedOnSession defines no loggedOn session error.
 var ErrDoNotLoggedOnSession = errors.New(doNotLoggedOnSessionMessage)
 
+// ErrExistSession defines already exist session error.
+var ErrExistSession = errors.New("exist session")
+
 var stoppedSessionsLock sync.RWMutex
 var stoppedSessions = make(map[SessionID]*session)
 var isClosedStopeedSessions = false
+var storeMessageObject *sessionFactoryForStoreMessage
 
 // ErrorBySessionID This struct has error map by sessionID.
 type ErrorBySessionID struct {
@@ -240,7 +244,18 @@ func SendToSession(m Messagable, sessionID SessionID) (err error) {
 	if ok {
 		return session.queueForSend(msg)
 	}
-	return errUnknownSession
+	return ErrUnknownSession
+}
+
+// StoreMessageToSession stores a message on session.
+// If returns ErrExistSession, please call SendToSession because already connected session.
+func StoreMessageToSession(m Messagable, sessionID SessionID) (err error) {
+	if storeMessageObject == nil {
+		err = errors.New("unsupported store message")
+		return
+	}
+	err = storeMessageObject.storeMessage(m, sessionID)
+	return
 }
 
 func registerStoppedSession(s *session) {

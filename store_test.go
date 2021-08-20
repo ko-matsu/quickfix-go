@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cryptogarageinc/quickfix-go/internal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -183,22 +184,6 @@ func (suite *MessageStoreTestSuite) TestMessageStore_CreationTime() {
 	require.True(suite.T(), suite.msgStore.CreationTime().Before(t1))
 }
 
-func (suite *MessageStoreTestSuite) TestMessageStore_SaveMessage_IncrNextSenderMsgSeqNum() {
-	t := suite.T()
-
-	// Given the following saved messages
-	expectedMsgsBySeqNum := []string{
-		"In the frozen land of Nador",
-		"they were forced to eat Robin's minstrels",
-		"and there was much rejoicing",
-	}
-	for i, msg := range expectedMsgsBySeqNum {
-		seqNum := i + 1
-		require.Nil(t, suite.msgStore.SaveMessage(seqNum, []byte(msg)))
-	}
-	assert.Equal(t, 4, suite.msgStore.NextSenderMsgSeqNum())
-}
-
 func (suite *MessageStoreTestSuite) TestMessageStore_Close_After() {
 	t := suite.T()
 	require.Nil(suite.T(), suite.msgStore.Reset())
@@ -231,4 +216,72 @@ func (suite *MessageStoreTestSuite) TestMessageStore_Close_After() {
 	require.Equal(t, err, ErrAccessToClosedStore)
 	err = suite.msgStore.Reset()
 	require.Equal(t, err, ErrAccessToClosedStore)
+}
+
+func (suite *MessageStoreTestSuite) TestMessageTxStore_BuildAndSaveMessage() {
+	t := suite.T()
+
+	msgTxStore, ok := suite.msgStore.(MessageTxStore)
+	if !ok {
+		suite.T().Skip()
+	}
+
+	createMsgFn := func() *Message {
+		message := NewMessage()
+		message.Header.SetString(35, "BE")
+		message.Body.SetString(923, "testID")
+		message.Body.SetInt(924, 1)
+		message.Body.SetString(553, "test")
+		return message
+	}
+
+	sessionID := SessionID{}
+	reqMsg1 := createMsgFn()
+	reqMsg2 := createMsgFn()
+	reqMsg3 := createMsgFn()
+	data := MessageBuildData{
+		sessionID:          sessionID,
+		settings:           &internal.SessionSettings{},
+		timestampPrecision: Seconds,
+	}
+	arr := []*Message{reqMsg1.ToMessage(), reqMsg2.ToMessage(), reqMsg3.ToMessage()}
+	for i, msg := range arr {
+		_, err := msgTxStore.BuildAndSaveMessage(msg, &data, buildMessage)
+		assert.NoError(t, err)
+		assert.Equal(t, 2+i, msgTxStore.NextSenderMsgSeqNum())
+	}
+}
+
+func (suite *MessageStoreTestSuite) TestMessageTxStore_BuildAndSaveMessage_ResetTx() {
+	t := suite.T()
+
+	msgTxStore, ok := suite.msgStore.(MessageTxStore)
+	if !ok {
+		suite.T().Skip()
+	}
+
+	createMsgFn := func() *Message {
+		message := NewMessage()
+		message.Header.SetString(35, "A") // Logon
+		message.Body.SetInt(98, 0)
+		message.Body.SetInt(108, 30)
+		return message
+	}
+
+	sessionID := SessionID{}
+	msg := createMsgFn()
+	data := MessageBuildData{
+		sessionID:          sessionID,
+		settings:           &internal.SessionSettings{},
+		timestampPrecision: Seconds,
+	}
+	msg.Body.SetBool(141, true) // reset
+
+	_, err := msgTxStore.BuildAndSaveMessage(msg, &data, buildMessage)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, msgTxStore.NextSenderMsgSeqNum())
+
+	_, err = msgTxStore.BuildAndSaveMessage(msg, &data, buildMessage)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, msgTxStore.NextSenderMsgSeqNum())
 }

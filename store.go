@@ -28,6 +28,19 @@ type MessageStore interface {
 	Close() error
 }
 
+// MessageTxStore defines save transaction message
+type MessageTxStore interface {
+	MessageStore
+
+	BuildAndSaveMessage(
+		msg *Message,
+		messageBuildData *MessageBuildData,
+		buildFunc func(MessageStore, *Message, *MessageBuildData, interface{}) (msgBytes []byte, err error),
+	) (msgBytes []byte, err error)
+
+	ResetByTx(tx interface{}) error
+}
+
 //The MessageStoreFactory interface is used by session to create a session specific message store
 type MessageStoreFactory interface {
 	Create(sessionID SessionID) (MessageStore, error)
@@ -109,13 +122,6 @@ func (store *memoryStore) SaveMessage(seqNum int, msg []byte) error {
 		store.messageMap = make(map[int][]byte)
 	}
 
-	// TODO(k-matsuzawa): Reconsider exclusionary control.
-	if _, ok := store.messageMap[seqNum]; ok {
-		return errors.New("unmatch sender seqnum")
-	}
-	if err := store.IncrNextSenderMsgSeqNum(); err != nil {
-		return err
-	}
 	store.messageMap[seqNum] = msg
 	return nil
 }

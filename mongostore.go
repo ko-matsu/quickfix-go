@@ -7,7 +7,6 @@ import (
 	"github.com/cryptogarageinc/quickfix-go/config"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
-	"github.com/globalsign/mgo/txn"
 	"github.com/pkg/errors"
 )
 
@@ -15,7 +14,6 @@ type mongoStoreFactory struct {
 	settings           *Settings
 	messagesCollection string
 	sessionsCollection string
-	txCollection       string
 }
 
 type mongoStore struct {
@@ -26,7 +24,6 @@ type mongoStore struct {
 	db                 *mgo.Session
 	messagesCollection string
 	sessionsCollection string
-	txCollection       string
 }
 
 // NewMongoStoreFactory returns a mongo-based implementation of MessageStoreFactory
@@ -40,7 +37,6 @@ func NewMongoStoreFactoryPrefixed(settings *Settings, collectionsPrefix string) 
 		settings:           settings,
 		messagesCollection: collectionsPrefix + "messages",
 		sessionsCollection: collectionsPrefix + "sessions",
-		txCollection:       collectionsPrefix + "tc",
 	}
 }
 
@@ -74,10 +70,10 @@ func (f mongoStoreFactory) Create(sessionID SessionID) (msgStore MessageStore, e
 	} else if len(mongoDatabase) == 0 {
 		return nil, fmt.Errorf("MongoStoreDatabase configuration is not found. session: %v", sessionID)
 	}
-	return newMongoStore(sessionID, mongoConnectionURL, mongoDatabase, f.messagesCollection, f.sessionsCollection, f.txCollection)
+	return newMongoStore(sessionID, mongoConnectionURL, mongoDatabase, f.messagesCollection, f.sessionsCollection)
 }
 
-func newMongoStore(sessionID SessionID, mongoURL string, mongoDatabase string, messagesCollection string, sessionsCollection string, txCollection string) (store *mongoStore, err error) {
+func newMongoStore(sessionID SessionID, mongoURL string, mongoDatabase string, messagesCollection string, sessionsCollection string) (store *mongoStore, err error) {
 	store = &mongoStore{
 		sessionID:          sessionID,
 		cache:              &memoryStore{},
@@ -85,8 +81,6 @@ func newMongoStore(sessionID SessionID, mongoURL string, mongoDatabase string, m
 		mongoDatabase:      mongoDatabase,
 		messagesCollection: messagesCollection,
 		sessionsCollection: sessionsCollection,
-		txCollection:       txCollection,
-		// txStashCollection: txCollection + ".stash"
 	}
 
 	if err = store.cache.Reset(); err != nil {
@@ -278,43 +272,10 @@ func (store *mongoStore) SaveMessage(seqNum int, msg []byte) (err error) {
 		err = ErrAccessToClosedStore
 		return
 	}
-
-	// TODO(k-matsuzawa): Reconsider exclusionary control.
-	insertIDFilter := generateMessageFilter(&store.sessionID)
-	insertIDFilter.Msgseq = seqNum
 	msgFilter := generateMessageFilter(&store.sessionID)
 	msgFilter.Msgseq = seqNum
 	msgFilter.Message = msg
-
-	nextSeqNum := store.cache.NextSenderMsgSeqNum()
-	if seqNum != nextSeqNum {
-		return errors.Errorf("unmatch sender seqnum: %d, %d", seqNum, nextSeqNum)
-	}
-	nextSeqNum++
-	idMsgFilter := generateMessageFilter(&store.sessionID)
-	sessionUpdate := generateMessageFilter(&store.sessionID)
-	sessionUpdate.IncomingSeqNum = store.cache.NextTargetMsgSeqNum()
-	sessionUpdate.OutgoingSeqNum = nextSeqNum
-	sessionUpdate.CreationTime = store.cache.CreationTime()
-
-	ops := []txn.Op{{
-		C:      store.messagesCollection,
-		Id:     insertIDFilter,
-		Assert: txn.DocMissing,
-		Insert: msgFilter,
-	}, {
-		C:      store.sessionsCollection,
-		Id:     idMsgFilter,
-		Assert: txn.DocMissing,
-		Update: sessionUpdate,
-	}}
-
-	err = txn.NewRunner(store.db.DB(store.mongoDatabase).C(store.txCollection)).Run(ops, "", nil)
-	if err != nil {
-		return
-	}
-	store.cache.SetNextSenderMsgSeqNum(nextSeqNum)
-	// _ = store.Refresh()
+	err = store.db.DB(store.mongoDatabase).C(store.messagesCollection).Insert(msgFilter)
 	return
 }
 

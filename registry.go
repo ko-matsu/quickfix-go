@@ -4,6 +4,8 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"github.com/cryptogarageinc/quickfix-go/internal"
 )
 
 var sessionsLock sync.RWMutex
@@ -342,4 +344,54 @@ func CleanupInvalidStoppedSession() {
 			delete(stoppedSessions, id)
 		}
 	}
+}
+
+type messageStoreAccessor struct {
+	storeFactory MessageStoreFactory
+	settings     *SessionSettings
+}
+
+func (f *messageStoreAccessor) storeMessage(m Messagable, sessionID SessionID) (err error) {
+	_, exist := lookupSession(sessionID)
+	if exist {
+		return ErrExistSession
+	}
+	store, err := f.storeFactory.Create(sessionID)
+	if err != nil {
+		return err
+	}
+	defer store.Close()
+
+	txStore, ok := store.(MessageTxStore)
+	if !ok {
+		return errors.New("this store is not implements MessageTxStore")
+	}
+
+	sessionSettings := internal.SessionSettings{}
+	var timestampPrecision TimestampPrecision
+	if err = setMessageSettings(f.settings, &sessionSettings, &timestampPrecision); err != nil {
+		return
+	}
+	if sessionSettings.DisableMessagePersist {
+		return errors.New("PersistMessages is N. store not supported")
+	}
+
+	msg := m.ToMessage()
+	msgType, err := msg.Header.GetBytes(tagMsgType)
+	if err != nil {
+		return
+	} else if isAdminMessageType(msgType) {
+		return errors.New("admin message not supported")
+	}
+
+	data := MessageBuildData{
+		sessionID:          sessionID,
+		settings:           &sessionSettings,
+		timestampPrecision: timestampPrecision,
+	}
+	_, err = txStore.BuildAndSaveMessage(msg, &data, buildMessage)
+	if err != nil {
+		return
+	}
+	return
 }

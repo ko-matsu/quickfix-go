@@ -43,7 +43,7 @@ func (s *InSessionTestSuite) TestLogout() {
 }
 
 func (s *InSessionTestSuite) TestLogoutEnableLastMsgSeqNumProcessed() {
-	s.session.setEnableLastMsgSeqNumProcessed(true)
+	s.session.EnableLastMsgSeqNumProcessed = true
 
 	s.MockApp.On("FromAdmin").Return(nil)
 	s.MockApp.On("ToAdmin")
@@ -126,7 +126,7 @@ func (s *InSessionTestSuite) TestStop() {
 }
 
 func (s *InSessionTestSuite) TestFIXMsgInTargetTooHighEnableLastMsgSeqNumProcessed() {
-	s.session.setEnableLastMsgSeqNumProcessed(true)
+	s.session.EnableLastMsgSeqNumProcessed = true
 	s.MessageFactory.seqNum = 5
 
 	s.MockApp.On("ToAdmin")
@@ -274,7 +274,7 @@ func (s *InSessionTestSuite) TestFIXMsgInResendRequestAllAdminThenApp() {
 }
 
 func (s *InSessionTestSuite) TestFIXMsgInResendRequestNoMessagePersist() {
-	s.session.setDisableMessagePersist(true)
+	s.session.DisableMessagePersist = true
 
 	s.MockApp.On("ToApp").Return(nil)
 	s.Require().Nil(s.session.send(s.NewOrderSingle()))

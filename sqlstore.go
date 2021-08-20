@@ -7,7 +7,6 @@ import (
 
 	"github.com/cryptogarageinc/quickfix-go/config"
 	"github.com/jinzhu/gorm"
-	"github.com/pkg/errors"
 )
 
 type sqlStoreFactory struct {
@@ -23,6 +22,7 @@ type sqlStore struct {
 	sqlConnMaxIdle     int
 	sqlConnMaxOpen     int
 	db                 *gorm.DB
+	dbSettings         dbSettings
 }
 
 type dbSettings struct {
@@ -38,6 +38,19 @@ func NewSQLStoreFactory(settings *Settings) MessageStoreFactory {
 
 // Create creates a new SQLStore implementation of the MessageStore interface
 func (f sqlStoreFactory) Create(sessionID SessionID) (msgStore MessageStore, err error) {
+	store, err := f.create(sessionID)
+	if err != nil {
+		return
+	}
+	err = store.open()
+	if err != nil {
+		return
+	}
+	msgStore = store
+	return
+}
+
+func (f sqlStoreFactory) create(sessionID SessionID) (msgStore *sqlStore, err error) {
 	var sqlDriver string
 	var sqlDataSourceName string
 	sqlConnMaxLifetime := 0 * time.Second
@@ -87,40 +100,40 @@ func (f sqlStoreFactory) Create(sessionID SessionID) (msgStore MessageStore, err
 	} else if len(sqlDataSourceName) == 0 {
 		return nil, fmt.Errorf("SQLStoreDataSourceName configuration is not found. session: %v", sessionID)
 	}
-	return newSQLStore(sessionID, sqlDriver, sqlDataSourceName, dbSettings{
-		connMaxLifetime: sqlConnMaxLifetime,
-		connMaxIdle:     sqlConnMaxIdle,
-		connMaxOpen:     sqlConnMaxOpen,
-	})
-}
-
-func newSQLStore(sessionID SessionID, driver string, dataSourceName string, dbs dbSettings) (store *sqlStore, err error) {
-	store = &sqlStore{
+	return &sqlStore{
 		sessionID:          sessionID,
 		cache:              &memoryStore{},
-		sqlDriver:          driver,
-		sqlDataSourceName:  dataSourceName,
-		sqlConnMaxLifetime: dbs.connMaxLifetime,
-		sqlConnMaxIdle:     dbs.connMaxIdle,
-		sqlConnMaxOpen:     dbs.connMaxOpen,
-	}
+		sqlDriver:          sqlDriver,
+		sqlDataSourceName:  sqlDataSourceName,
+		sqlConnMaxLifetime: sqlConnMaxLifetime,
+		sqlConnMaxIdle:     sqlConnMaxIdle,
+		sqlConnMaxOpen:     sqlConnMaxOpen,
+		dbSettings: dbSettings{
+			connMaxLifetime: sqlConnMaxLifetime,
+			connMaxIdle:     sqlConnMaxIdle,
+			connMaxOpen:     sqlConnMaxOpen,
+		},
+	}, nil
+}
+
+// open returns database open results.
+func (store *sqlStore) open() (err error) {
 	store.cache.Reset()
 
 	if store.db, err = gorm.Open(store.sqlDriver, store.sqlDataSourceName); err != nil {
-		return nil, err
+		return
 	}
-	store.db.DB().SetConnMaxLifetime(dbs.connMaxLifetime)
-	store.db.DB().SetMaxIdleConns(dbs.connMaxIdle)
-	store.db.DB().SetMaxOpenConns(dbs.connMaxOpen)
+	store.db.DB().SetConnMaxLifetime(store.dbSettings.connMaxLifetime)
+	store.db.DB().SetMaxIdleConns(store.dbSettings.connMaxIdle)
+	store.db.DB().SetMaxOpenConns(store.dbSettings.connMaxOpen)
 
 	if err = store.db.DB().Ping(); err != nil { // ensure immediate connection
-		return nil, err
+		return
 	}
 	if err = store.populateCache(); err != nil {
-		return nil, err
+		return
 	}
-
-	return store, nil
+	return
 }
 
 // Reset deletes the store records and sets the seqnums back to 1
@@ -276,54 +289,16 @@ func (store *sqlStore) SaveMessage(seqNum int, msg []byte) error {
 	}
 	s := store.sessionID
 
-	err := store.db.Transaction(func(tx *gorm.DB) error {
-		var outgoingSeqNum int
-		row := tx.Raw(`SELECT outgoing_seqnum FROM sessions
-			WHERE beginstring = ? AND session_qualifier = ?
-			AND sendercompid = ? AND sendersubid = ? AND senderlocid = ?
-			AND targetcompid = ? AND targetsubid = ? AND targetlocid = ?`,
-			s.BeginString, s.Qualifier,
-			s.SenderCompID, s.SenderSubID, s.SenderLocationID,
-			s.TargetCompID, s.TargetSubID, s.TargetLocationID).Row()
-
-		if err := row.Scan(&outgoingSeqNum); err != nil {
-			return err
-		}
-		nextSeqNum := outgoingSeqNum
-		if seqNum != nextSeqNum {
-			return errors.Errorf("unmatch sender seqnum: %d, %d", seqNum, nextSeqNum)
-		}
-		nextSeqNum++
-
-		if err := tx.Exec(`INSERT INTO messages (
+	return store.db.Exec(`INSERT INTO messages (
 			msgseqnum, message,
 			beginstring, session_qualifier,
 			sendercompid, sendersubid, senderlocid,
 			targetcompid, targetsubid, targetlocid)
 			VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			seqNum, string(msg),
-			s.BeginString, s.Qualifier,
-			s.SenderCompID, s.SenderSubID, s.SenderLocationID,
-			s.TargetCompID, s.TargetSubID, s.TargetLocationID).Error; err != nil {
-			return err
-		}
-
-		if err := tx.Exec(`UPDATE sessions SET outgoing_seqnum = ?
-			WHERE beginstring = ? AND session_qualifier = ?
-			AND sendercompid = ? AND sendersubid = ? AND senderlocid = ?
-			AND targetcompid = ? AND targetsubid = ? AND targetlocid = ?`,
-			nextSeqNum, s.BeginString, s.Qualifier,
-			s.SenderCompID, s.SenderSubID, s.SenderLocationID,
-			s.TargetCompID, s.TargetSubID, s.TargetLocationID).Error; err != nil {
-			return err
-		}
-		store.cache.SetNextSenderMsgSeqNum(nextSeqNum)
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	return nil
+		seqNum, string(msg),
+		s.BeginString, s.Qualifier,
+		s.SenderCompID, s.SenderSubID, s.SenderLocationID,
+		s.TargetCompID, s.TargetSubID, s.TargetLocationID).Error
 }
 
 func (store *sqlStore) GetMessages(beginSeqNum, endSeqNum int) ([][]byte, error) {

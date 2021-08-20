@@ -245,7 +245,7 @@ func (f sessionFactory) newSession(
 		}
 	}
 
-	if err = s.setMessageManagerSettings(settings); err != nil {
+	if err = setMessageSettings(settings, &s.SessionSettings, &s.timestampPrecision); err != nil {
 		return
 	}
 

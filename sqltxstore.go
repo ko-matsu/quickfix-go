@@ -36,10 +36,9 @@ func (f sqlTxStoreFactory) Create(sessionID SessionID) (msgStore MessageStore, e
 }
 
 func (store *sqlTxStore) BuildAndSaveMessage(
-	msg *Message,
 	messageBuildData *MessageBuildData,
-	buildFunc func(MessageStore, *Message, *MessageBuildData, interface{}) (msgBytes []byte, err error),
-) (msgBytes []byte, err error) {
+	buildFunc func(MessageStore, *MessageBuildData, interface{}) (*MessageBuildOutputData, error),
+) (output *MessageBuildOutputData, err error) {
 	if store.db == nil {
 		return nil, ErrAccessToClosedStore
 	}
@@ -62,11 +61,15 @@ func (store *sqlTxStore) BuildAndSaveMessage(
 			store.cache.SetNextSenderMsgSeqNum(outgoingSeqNum) // refresh
 		}
 
-		msgBytes, err = buildFunc(store, msg, messageBuildData, tx)
+		outputData, err := buildFunc(store, messageBuildData, tx)
 		if err != nil {
 			return err
 		}
+		output = outputData // Response should also be returned in case of an error.
 		seqNum := store.cache.NextSenderMsgSeqNum()
+		if seqNum != output.seqNum {
+			return errors.New("Internal error: unmatch seqnum")
+		}
 		nextSeqNum := seqNum + 1
 
 		if err := tx.Exec(`INSERT INTO messages (
@@ -75,7 +78,7 @@ func (store *sqlTxStore) BuildAndSaveMessage(
 			sendercompid, sendersubid, senderlocid,
 			targetcompid, targetsubid, targetlocid)
 			VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			seqNum, string(msgBytes),
+			seqNum, string(outputData.msgBytes),
 			s.BeginString, s.Qualifier,
 			s.SenderCompID, s.SenderSubID, s.SenderLocationID,
 			s.TargetCompID, s.TargetSubID, s.TargetLocationID).Error; err != nil {
@@ -94,9 +97,10 @@ func (store *sqlTxStore) BuildAndSaveMessage(
 		return store.cache.SetNextSenderMsgSeqNum(nextSeqNum)
 	})
 	if err != nil {
-		return nil, err
+		// Response should also be returned in case of an error.
+		return
 	}
-	return msgBytes, nil
+	return output, nil
 }
 
 func (store *sqlTxStore) ResetByTx(tx interface{}) (err error) {

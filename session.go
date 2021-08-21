@@ -14,7 +14,7 @@ import (
 
 //The Session is the primary FIX abstraction for message communication
 type session struct {
-	store              MessageStore
+	store MessageStore
 
 	log       Log
 	sessionID SessionID
@@ -46,25 +46,11 @@ type session struct {
 
 	messagePool
 	timestampPrecision TimestampPrecision
-	linkedAcceptor *Acceptor
+	linkedAcceptor     *Acceptor
 
 	notifyLogonEvent       chan struct{}
 	stoppedSessionKeepTime time.Duration
 	stopTime               time.Time
-}
-
-type MessageBuildData struct {
-	// input
-	inReplyTo          *Message
-	sessionID          SessionID
-	application        *Application
-	logger             *Log
-	settings           *internal.SessionSettings
-	timestampPrecision TimestampPrecision
-
-	// output
-	sentReset bool
-	seqNum    int
 }
 
 func (s *session) logError(err error) {
@@ -112,10 +98,6 @@ func (s *session) waitForInSessionTime() {
 	}
 }
 
-func (s *session) insertSendingTime(msg *Message) {
-	insertSendingTime(msg, s.sessionID, s.timestampPrecision)
-}
-
 func insertSendingTime(msg *Message, sessionID SessionID, timestampPrecision TimestampPrecision) {
 	sendingTime := time.Now().UTC()
 
@@ -126,16 +108,13 @@ func insertSendingTime(msg *Message, sessionID SessionID, timestampPrecision Tim
 	}
 }
 
+func (s *session) insertSendingTime(msg *Message) {
+	insertSendingTime(msg, s.sessionID, s.timestampPrecision)
+}
+
 func optionallySetID(msg *Message, field Tag, value string) {
 	if len(value) != 0 {
 		msg.Header.SetString(field, value)
-	}
-}
-
-func (s *session) fillDefaultHeader(msg *Message, inReplyTo *Message) {
-	err := fillDefaultHeader(s.store, msg, inReplyTo, s.sessionID, &s.SessionSettings, s.timestampPrecision)
-	if err != nil {
-		s.logError(err)
 	}
 }
 
@@ -163,6 +142,13 @@ func fillDefaultHeader(store MessageStore, msg *Message, inReplyTo *Message, ses
 		}
 	}
 	return nil
+}
+
+func (s *session) fillDefaultHeader(msg *Message, inReplyTo *Message) {
+	err := fillDefaultHeader(s.store, msg, inReplyTo, s.sessionID, &s.SessionSettings, s.timestampPrecision)
+	if err != nil {
+		s.logError(err)
+	}
 }
 
 func (s *session) shouldSendReset() bool {
@@ -314,6 +300,7 @@ func (s *session) dropAndSendInReplyTo(msg *Message, inReplyTo *Message) error {
 
 func (s *session) prepMessageForSend(msg *Message, inReplyTo *Message) (msgBytes []byte, err error) {
 	data := MessageBuildData{
+		msg:                msg,
 		inReplyTo:          inReplyTo,
 		sessionID:          s.sessionID,
 		application:        &s.application,
@@ -321,32 +308,39 @@ func (s *session) prepMessageForSend(msg *Message, inReplyTo *Message) (msgBytes
 		settings:           &s.SessionSettings,
 		timestampPrecision: s.timestampPrecision,
 	}
+	var output *MessageBuildOutputData
 	if txStore, ok := s.store.(MessageTxStore); ok && !s.DisableMessagePersist {
-		msgBytes, err = txStore.BuildAndSaveMessage(msg, &data, buildMessage)
-		if data.sentReset {
-			s.sentReset = data.sentReset
+		output, err = txStore.BuildAndSaveMessage(&data, buildMessage)
+		if output != nil && output.sentReset { // check for error
+			s.sentReset = output.sentReset
 		}
-		return
-	}
-
-	msgBytes, err = buildMessage(s.store, msg, &data, nil)
-	if data.sentReset {
-		s.sentReset = data.sentReset
+	} else {
+		output, err = buildMessage(s.store, &data, nil)
+		if err != nil {
+			return
+		}
+		if output.sentReset {
+			s.sentReset = output.sentReset
+		}
+		err = s.persist(output.seqNum, output.msgBytes)
 	}
 	if err != nil {
 		return
 	}
-	err = s.persist(data.seqNum, msgBytes)
+
+	msgBytes = output.msgBytes
 	return
 }
 
-func buildMessage(store MessageStore, msg *Message, bd *MessageBuildData, tx interface{}) (msgBytes []byte, err error) {
+func buildMessage(store MessageStore, bd *MessageBuildData, tx interface{}) (output *MessageBuildOutputData, err error) {
+	msg := bd.msg
 	tmpErr := fillDefaultHeader(store, msg, bd.inReplyTo, bd.sessionID, bd.settings, bd.timestampPrecision)
 	if tmpErr != nil && bd.logger != nil {
 		(*bd.logger).OnEvent(err.Error())
 	}
-	bd.seqNum = store.NextSenderMsgSeqNum()
-	msg.Header.SetField(tagMsgSeqNum, FIXInt(bd.seqNum))
+	outputData := MessageBuildOutputData{}
+	outputData.seqNum = store.NextSenderMsgSeqNum()
+	msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.seqNum))
 
 	msgType, err := msg.Header.GetBytes(tagMsgType)
 	if err != nil {
@@ -377,9 +371,9 @@ func buildMessage(store MessageStore, msg *Message, bd *MessageBuildData, tx int
 					}
 				}
 
-				bd.sentReset = true
-				bd.seqNum = store.NextSenderMsgSeqNum()
-				msg.Header.SetField(tagMsgSeqNum, FIXInt(bd.seqNum))
+				outputData.sentReset = true
+				outputData.seqNum = store.NextSenderMsgSeqNum()
+				msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.seqNum))
 			}
 		}
 	} else if bd.application != nil {
@@ -388,7 +382,8 @@ func buildMessage(store MessageStore, msg *Message, bd *MessageBuildData, tx int
 		}
 	}
 
-	msgBytes = msg.build()
+	outputData.msgBytes = msg.build()
+	output = &outputData
 
 	return
 }

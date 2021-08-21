@@ -111,6 +111,11 @@ var ErrDoNotLoggedOnSession = errors.New(doNotLoggedOnSessionMessage)
 // ErrExistSession defines already exist session error.
 var ErrExistSession = errors.New("exist session")
 
+type messageStoreAccessor struct {
+	storeFactory MessageStoreFactory
+	settings     *SessionSettings
+}
+
 var stoppedSessionsLock sync.RWMutex
 var stoppedSessions = make(map[SessionID]*session)
 var isClosedStopeedSessions = false
@@ -346,16 +351,7 @@ func CleanupInvalidStoppedSession() {
 	}
 }
 
-type messageStoreAccessor struct {
-	storeFactory MessageStoreFactory
-	settings     *SessionSettings
-}
-
 func (f *messageStoreAccessor) storeMessage(m Messagable, sessionID SessionID) (err error) {
-	_, exist := lookupSession(sessionID)
-	if exist {
-		return ErrExistSession
-	}
 	store, err := f.storeFactory.Create(sessionID)
 	if err != nil {
 		return err
@@ -385,11 +381,12 @@ func (f *messageStoreAccessor) storeMessage(m Messagable, sessionID SessionID) (
 	}
 
 	data := MessageBuildData{
+		msg:                msg,
 		sessionID:          sessionID,
 		settings:           &sessionSettings,
 		timestampPrecision: timestampPrecision,
 	}
-	_, err = txStore.BuildAndSaveMessage(msg, &data, buildMessage)
+	_, err = txStore.BuildAndSaveMessage(&data, buildMessage)
 	if err != nil {
 		return
 	}

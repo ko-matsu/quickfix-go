@@ -246,7 +246,9 @@ func (suite *MessageStoreTestSuite) TestMessageTxStore_BuildAndSaveMessage() {
 	}
 	arr := []*Message{reqMsg1.ToMessage(), reqMsg2.ToMessage(), reqMsg3.ToMessage()}
 	for i, msg := range arr {
-		_, err := msgTxStore.BuildAndSaveMessage(msg, &data, buildMessage)
+		tmpData := data
+		tmpData.msg = msg
+		_, err := msgTxStore.BuildAndSaveMessage(&tmpData, buildMessage)
 		assert.NoError(t, err)
 		assert.Equal(t, 2+i, msgTxStore.NextSenderMsgSeqNum())
 	}
@@ -271,17 +273,18 @@ func (suite *MessageStoreTestSuite) TestMessageTxStore_BuildAndSaveMessage_Reset
 	sessionID := SessionID{}
 	msg := createMsgFn()
 	data := MessageBuildData{
+		msg:                msg,
 		sessionID:          sessionID,
 		settings:           &internal.SessionSettings{},
 		timestampPrecision: Seconds,
 	}
 	msg.Body.SetBool(141, true) // reset
 
-	_, err := msgTxStore.BuildAndSaveMessage(msg, &data, buildMessage)
+	_, err := msgTxStore.BuildAndSaveMessage(&data, buildMessage)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, msgTxStore.NextSenderMsgSeqNum())
 
-	_, err = msgTxStore.BuildAndSaveMessage(msg, &data, buildMessage)
+	_, err = msgTxStore.BuildAndSaveMessage(&data, buildMessage)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, msgTxStore.NextSenderMsgSeqNum())
 }

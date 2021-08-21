@@ -118,7 +118,7 @@ func optionallySetID(msg *Message, field Tag, value string) {
 	}
 }
 
-func fillDefaultHeader(store MessageStore, msg *Message, inReplyTo *Message, sessionID SessionID, settings *internal.SessionSettings, timestampPrecision TimestampPrecision) error {
+func fillDefaultHeader(store MessageStore, msg *Message, inReplyTo *Message, sessionID SessionID, enableLastMsgSeqNumProcessed bool, timestampPrecision TimestampPrecision) error {
 	msg.Header.SetString(tagBeginString, sessionID.BeginString)
 	msg.Header.SetString(tagSenderCompID, sessionID.SenderCompID)
 	optionallySetID(msg, tagSenderSubID, sessionID.SenderSubID)
@@ -130,7 +130,7 @@ func fillDefaultHeader(store MessageStore, msg *Message, inReplyTo *Message, ses
 
 	insertSendingTime(msg, sessionID, timestampPrecision)
 
-	if settings.EnableLastMsgSeqNumProcessed {
+	if enableLastMsgSeqNumProcessed {
 		if inReplyTo != nil {
 			lastSeqNum, err := inReplyTo.Header.GetInt(tagMsgSeqNum)
 			if err != nil {
@@ -145,7 +145,7 @@ func fillDefaultHeader(store MessageStore, msg *Message, inReplyTo *Message, ses
 }
 
 func (s *session) fillDefaultHeader(msg *Message, inReplyTo *Message) {
-	err := fillDefaultHeader(s.store, msg, inReplyTo, s.sessionID, &s.SessionSettings, s.timestampPrecision)
+	err := fillDefaultHeader(s.store, msg, inReplyTo, s.sessionID, s.EnableLastMsgSeqNumProcessed, s.timestampPrecision)
 	if err != nil {
 		s.logError(err)
 	}
@@ -300,47 +300,47 @@ func (s *session) dropAndSendInReplyTo(msg *Message, inReplyTo *Message) error {
 
 func (s *session) prepMessageForSend(msg *Message, inReplyTo *Message) (msgBytes []byte, err error) {
 	data := MessageBuildData{
-		msg:                msg,
-		inReplyTo:          inReplyTo,
-		sessionID:          s.sessionID,
-		application:        &s.application,
-		logger:             &s.log,
-		settings:           &s.SessionSettings,
-		timestampPrecision: s.timestampPrecision,
+		Msg:                          msg,
+		InReplyTo:                    inReplyTo,
+		SessionID:                    s.sessionID,
+		application:                  &s.application,
+		logger:                       &s.log,
+		EnableLastMsgSeqNumProcessed: s.SessionSettings.EnableLastMsgSeqNumProcessed,
+		TimestampPrecision:           s.timestampPrecision,
 	}
 	var output *MessageBuildOutputData
 	if txStore, ok := s.store.(MessageTxStore); ok && !s.DisableMessagePersist {
 		output, err = txStore.BuildAndSaveMessage(&data, buildMessage)
-		if output != nil && output.sentReset { // check for error
-			s.sentReset = output.sentReset
+		if output != nil && output.SentReset { // check for error
+			s.sentReset = output.SentReset
 		}
 	} else {
 		output, err = buildMessage(s.store, &data, nil)
 		if err != nil {
 			return
 		}
-		if output.sentReset {
-			s.sentReset = output.sentReset
+		if output.SentReset {
+			s.sentReset = output.SentReset
 		}
-		err = s.persist(output.seqNum, output.msgBytes)
+		err = s.persist(output.SeqNum, output.MsgBytes)
 	}
 	if err != nil {
 		return
 	}
 
-	msgBytes = output.msgBytes
+	msgBytes = output.MsgBytes
 	return
 }
 
 func buildMessage(store MessageStore, bd *MessageBuildData, tx interface{}) (output *MessageBuildOutputData, err error) {
-	msg := bd.msg
-	tmpErr := fillDefaultHeader(store, msg, bd.inReplyTo, bd.sessionID, bd.settings, bd.timestampPrecision)
+	msg := bd.Msg
+	tmpErr := fillDefaultHeader(store, msg, bd.InReplyTo, bd.SessionID, bd.EnableLastMsgSeqNumProcessed, bd.TimestampPrecision)
 	if tmpErr != nil && bd.logger != nil {
 		(*bd.logger).OnEvent(err.Error())
 	}
 	outputData := MessageBuildOutputData{}
-	outputData.seqNum = store.NextSenderMsgSeqNum()
-	msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.seqNum))
+	outputData.SeqNum = store.NextSenderMsgSeqNum()
+	msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.SeqNum))
 
 	msgType, err := msg.Header.GetBytes(tagMsgType)
 	if err != nil {
@@ -349,7 +349,7 @@ func buildMessage(store MessageStore, bd *MessageBuildData, tx interface{}) (out
 
 	if isAdminMessageType(msgType) {
 		if bd.application != nil {
-			(*bd.application).ToAdmin(msg, bd.sessionID)
+			(*bd.application).ToAdmin(msg, bd.SessionID)
 		}
 
 		if bytes.Equal(msgType, msgTypeLogon) {
@@ -371,18 +371,18 @@ func buildMessage(store MessageStore, bd *MessageBuildData, tx interface{}) (out
 					}
 				}
 
-				outputData.sentReset = true
-				outputData.seqNum = store.NextSenderMsgSeqNum()
-				msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.seqNum))
+				outputData.SentReset = true
+				outputData.SeqNum = store.NextSenderMsgSeqNum()
+				msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.SeqNum))
 			}
 		}
 	} else if bd.application != nil {
-		if err = (*bd.application).ToApp(msg, bd.sessionID); err != nil {
+		if err = (*bd.application).ToApp(msg, bd.SessionID); err != nil {
 			return
 		}
 	}
 
-	outputData.msgBytes = msg.build()
+	outputData.MsgBytes = msg.build()
 	output = &outputData
 
 	return

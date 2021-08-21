@@ -3,7 +3,6 @@ package quickfix
 import (
 	"time"
 
-	"github.com/cryptogarageinc/quickfix-go/internal"
 	"github.com/pkg/errors"
 )
 
@@ -43,20 +42,20 @@ type MessageTxStore interface {
 
 // MessageBuildData stores for building message data
 type MessageBuildData struct {
-	msg                *Message
-	inReplyTo          *Message
-	sessionID          SessionID
-	application        *Application
-	logger             *Log
-	settings           *internal.SessionSettings
-	timestampPrecision TimestampPrecision
+	Msg                          *Message
+	InReplyTo                    *Message
+	SessionID                    SessionID
+	EnableLastMsgSeqNumProcessed bool
+	TimestampPrecision           TimestampPrecision
+	application                  *Application
+	logger                       *Log
 }
 
-// MessageBuildData stores build message output data
+// MessageBuildOutputData stores build message output data
 type MessageBuildOutputData struct {
-	msgBytes  []byte
-	sentReset bool
-	seqNum    int
+	MsgBytes  []byte
+	SentReset bool
+	SeqNum    int
 }
 
 //The MessageStoreFactory interface is used by session to create a session specific message store

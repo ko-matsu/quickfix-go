@@ -381,10 +381,10 @@ func (f *messageStoreAccessor) storeMessage(m Messagable, sessionID SessionID) (
 	}
 
 	data := MessageBuildData{
-		msg:                msg,
-		sessionID:          sessionID,
-		settings:           &sessionSettings,
-		timestampPrecision: timestampPrecision,
+		Msg:                          msg,
+		SessionID:                    sessionID,
+		EnableLastMsgSeqNumProcessed: sessionSettings.EnableLastMsgSeqNumProcessed,
+		TimestampPrecision:           timestampPrecision,
 	}
 	_, err = txStore.BuildAndSaveMessage(&data, buildMessage)
 	if err != nil {

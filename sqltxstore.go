@@ -67,7 +67,7 @@ func (store *sqlTxStore) BuildAndSaveMessage(
 		}
 		output = outputData // Response should also be returned in case of an error.
 		seqNum := store.cache.NextSenderMsgSeqNum()
-		if seqNum != output.seqNum {
+		if seqNum != output.SeqNum {
 			return errors.New("Internal error: unmatch seqnum")
 		}
 		nextSeqNum := seqNum + 1
@@ -78,7 +78,7 @@ func (store *sqlTxStore) BuildAndSaveMessage(
 			sendercompid, sendersubid, senderlocid,
 			targetcompid, targetsubid, targetlocid)
 			VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			seqNum, string(outputData.msgBytes),
+			seqNum, string(outputData.MsgBytes),
 			s.BeginString, s.Qualifier,
 			s.SenderCompID, s.SenderSubID, s.SenderLocationID,
 			s.TargetCompID, s.TargetSubID, s.TargetLocationID).Error; err != nil {

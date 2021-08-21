@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cryptogarageinc/quickfix-go/internal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -240,14 +239,12 @@ func (suite *MessageStoreTestSuite) TestMessageTxStore_BuildAndSaveMessage() {
 	reqMsg2 := createMsgFn()
 	reqMsg3 := createMsgFn()
 	data := MessageBuildData{
-		sessionID:          sessionID,
-		settings:           &internal.SessionSettings{},
-		timestampPrecision: Seconds,
+		SessionID: sessionID,
 	}
 	arr := []*Message{reqMsg1.ToMessage(), reqMsg2.ToMessage(), reqMsg3.ToMessage()}
 	for i, msg := range arr {
 		tmpData := data
-		tmpData.msg = msg
+		tmpData.Msg = msg
 		_, err := msgTxStore.BuildAndSaveMessage(&tmpData, buildMessage)
 		assert.NoError(t, err)
 		assert.Equal(t, 2+i, msgTxStore.NextSenderMsgSeqNum())
@@ -273,10 +270,8 @@ func (suite *MessageStoreTestSuite) TestMessageTxStore_BuildAndSaveMessage_Reset
 	sessionID := SessionID{}
 	msg := createMsgFn()
 	data := MessageBuildData{
-		msg:                msg,
-		sessionID:          sessionID,
-		settings:           &internal.SessionSettings{},
-		timestampPrecision: Seconds,
+		Msg:       msg,
+		SessionID: sessionID,
 	}
 	msg.Body.SetBool(141, true) // reset
 

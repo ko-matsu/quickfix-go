@@ -24,8 +24,7 @@ type sqlStore struct {
 	sqlConnMaxOpen     int
 	db                 *gorm.DB
 
-	// cache
-	tx *gorm.DB
+	messageBuilder
 }
 
 type dbSettings struct {
@@ -91,9 +90,9 @@ func (f sqlStoreFactory) Create(sessionID SessionID) (msgStore MessageStore, err
 		return nil, fmt.Errorf("SQLStoreDataSourceName configuration is not found. session: %v", sessionID)
 	}
 	return newSQLStore(sessionID, sqlDriver, sqlDataSourceName, dbSettings{
-			connMaxLifetime: sqlConnMaxLifetime,
-			connMaxIdle:     sqlConnMaxIdle,
-			connMaxOpen:     sqlConnMaxOpen,
+		connMaxLifetime: sqlConnMaxLifetime,
+		connMaxIdle:     sqlConnMaxIdle,
+		connMaxOpen:     sqlConnMaxOpen,
 	})
 }
 
@@ -131,11 +130,10 @@ func (store *sqlStore) Reset() (err error) {
 	if store.db == nil {
 		return ErrAccessToClosedStore
 	}
-	tx := store.db
-	if store.tx != nil {
-		tx = store.tx
-	}
+	return store.resetWithTx(store.db)
+}
 
+func (store *sqlStore) resetWithTx(tx *gorm.DB) (err error) {
 	s := store.sessionID
 	if err = tx.Exec(`DELETE FROM messages
 		WHERE beginstring = ? AND session_qualifier = ?
@@ -332,7 +330,7 @@ func (store *sqlStore) GetMessages(beginSeqNum, endSeqNum int) ([][]byte, error)
 	return msgs, nil
 }
 
-func (store *sqlStore) SaveMessageWithTx(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error) {
+func (store *sqlStore) SaveMessageWithTx(messageBuildData *BuildMessageInput) (output *BuildMessageOutput, err error) {
 	if store.db == nil {
 		return nil, ErrAccessToClosedStore
 	}
@@ -355,9 +353,7 @@ func (store *sqlStore) SaveMessageWithTx(messageBuildData *MessageBuildData) (ou
 			store.cache.SetNextSenderMsgSeqNum(outgoingSeqNum) // refresh
 		}
 
-		store.tx = tx
 		outputData, err := store.BuildMessage(messageBuildData)
-		store.tx = nil
 		if err != nil {
 			return err
 		}
@@ -399,8 +395,8 @@ func (store *sqlStore) SaveMessageWithTx(messageBuildData *MessageBuildData) (ou
 	return output, nil
 }
 
-func (store *sqlStore) BuildMessage(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error) {
-	return BuildMessageDefault(store, messageBuildData)
+func (store *sqlStore) BuildMessage(messageBuildData *BuildMessageInput) (output *BuildMessageOutput, err error) {
+	return store.buildMessage(store, messageBuildData)
 }
 
 // Close closes the store's database connection

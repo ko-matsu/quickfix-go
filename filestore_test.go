@@ -39,7 +39,6 @@ TargetCompID=%s`, fileStorePath, sessionID.BeginString, sessionID.SenderCompID, 
 
 func (suite *FileStoreTestSuite) TearDownTest() {
 	suite.msgStore.Close()
-	// os.RemoveAll(suite.getDirPath(suite.T()))
 }
 
 func TestFileStoreTestSuite(t *testing.T) {

@@ -375,7 +375,7 @@ func (f *messageStoreAccessor) storeMessage(m Messagable, sessionID SessionID) (
 		return errors.New("admin message not supported")
 	}
 
-	data := MessageBuildData{
+	data := BuildMessageInput{
 		Msg:                          msg,
 		SessionID:                    sessionID,
 		EnableLastMsgSeqNumProcessed: sessionSettings.EnableLastMsgSeqNumProcessed,

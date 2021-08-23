@@ -24,6 +24,8 @@ type mongoStore struct {
 	db                 *mgo.Session
 	messagesCollection string
 	sessionsCollection string
+
+	messageBuilder
 }
 
 // NewMongoStoreFactory returns a mongo-based implementation of MessageStoreFactory
@@ -309,7 +311,7 @@ func (store *mongoStore) GetMessages(beginSeqNum, endSeqNum int) (msgs [][]byte,
 	return
 }
 
-func (store *mongoStore) SaveMessageWithTx(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error) {
+func (store *mongoStore) SaveMessageWithTx(messageBuildData *BuildMessageInput) (output *BuildMessageOutput, err error) {
 	output, err = store.BuildMessage(messageBuildData)
 	if err != nil {
 		return
@@ -323,8 +325,8 @@ func (store *mongoStore) SaveMessageWithTx(messageBuildData *MessageBuildData) (
 	return
 }
 
-func (store *mongoStore) BuildMessage(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error) {
-	return BuildMessageDefault(store, messageBuildData)
+func (store *mongoStore) BuildMessage(messageBuildData *BuildMessageInput) (output *BuildMessageOutput, err error) {
+	return store.buildMessage(store, messageBuildData)
 }
 
 // Close closes the store's database connection

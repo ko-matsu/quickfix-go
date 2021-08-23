@@ -38,6 +38,7 @@ type fileStore struct {
 	targetSeqNumsFile  *os.File
 
 	isClosed bool
+	messageBuilder
 }
 
 // NewFileStoreFactory returns a file-based implementation of MessageStoreFactory
@@ -360,7 +361,7 @@ func (store *fileStore) GetMessages(beginSeqNum, endSeqNum int) ([][]byte, error
 	return msgs, nil
 }
 
-func (store *fileStore) SaveMessageWithTx(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error) {
+func (store *fileStore) SaveMessageWithTx(messageBuildData *BuildMessageInput) (output *BuildMessageOutput, err error) {
 	output, err = store.BuildMessage(messageBuildData)
 	if err != nil {
 		return
@@ -374,8 +375,8 @@ func (store *fileStore) SaveMessageWithTx(messageBuildData *MessageBuildData) (o
 	return
 }
 
-func (store *fileStore) BuildMessage(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error) {
-	return BuildMessageDefault(store, messageBuildData)
+func (store *fileStore) BuildMessage(messageBuildData *BuildMessageInput) (output *BuildMessageOutput, err error) {
+	return store.buildMessage(store, messageBuildData)
 }
 
 // Close closes the store's files

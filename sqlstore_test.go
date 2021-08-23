@@ -65,7 +65,6 @@ TargetCompID=%s`, sqlDriver, sqlDsn, sessionID.BeginString, sessionID.SenderComp
 
 func (suite *SQLStoreTestSuite) TearDownTest() {
 	suite.msgStore.Close()
-	// os.RemoveAll(suite.getDirPath(suite.T()))
 }
 
 func TestSqlStoreTestSuite(t *testing.T) {

@@ -233,7 +233,7 @@ func (suite *MessageStoreTestSuite) TestMessageTxStore_BuildAndSaveMessage() {
 	reqMsg1 := createMsgFn()
 	reqMsg2 := createMsgFn()
 	reqMsg3 := createMsgFn()
-	data := MessageBuildData{
+	data := BuildMessageInput{
 		SessionID: sessionID,
 	}
 	arr := []*Message{reqMsg1.ToMessage(), reqMsg2.ToMessage(), reqMsg3.ToMessage()}
@@ -259,7 +259,7 @@ func (suite *MessageStoreTestSuite) TestMessageTxStore_BuildAndSaveMessage_Reset
 
 	sessionID := SessionID{}
 	msg := createMsgFn()
-	data := MessageBuildData{
+	data := BuildMessageInput{
 		Msg:       msg,
 		SessionID: sessionID,
 	}

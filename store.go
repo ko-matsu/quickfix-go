@@ -27,26 +27,8 @@ type MessageStore interface {
 
 	Close() error
 
-	SaveMessageWithTx(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error)
-	BuildMessage(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error)
-}
-
-// MessageBuildData stores for building message data
-type MessageBuildData struct {
-	Msg                          *Message
-	InReplyTo                    *Message
-	SessionID                    SessionID
-	EnableLastMsgSeqNumProcessed bool
-	TimestampPrecision           TimestampPrecision
-	application                  *Application
-	logger                       *Log
-}
-
-// MessageBuildOutputData stores build message output data
-type MessageBuildOutputData struct {
-	MsgBytes  []byte
-	SentReset bool
-	SeqNum    int
+	SaveMessageWithTx(messageBuildData *BuildMessageInput) (output *BuildMessageOutput, err error)
+	BuildMessage(messageBuildData *BuildMessageInput) (output *BuildMessageOutput, err error)
 }
 
 //The MessageStoreFactory interface is used by session to create a session specific message store
@@ -60,6 +42,7 @@ type memoryStore struct {
 	messageMap                       map[int][]byte
 
 	isClosed bool
+	messageBuilder
 }
 
 func (store *memoryStore) NextSenderMsgSeqNum() int {
@@ -147,7 +130,7 @@ func (store *memoryStore) GetMessages(beginSeqNum, endSeqNum int) ([][]byte, err
 	return msgs, nil
 }
 
-func (store *memoryStore) SaveMessageWithTx(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error) {
+func (store *memoryStore) SaveMessageWithTx(messageBuildData *BuildMessageInput) (output *BuildMessageOutput, err error) {
 	output, err = store.BuildMessage(messageBuildData)
 	if err != nil {
 		return
@@ -161,8 +144,8 @@ func (store *memoryStore) SaveMessageWithTx(messageBuildData *MessageBuildData) 
 	return
 }
 
-func (store *memoryStore) BuildMessage(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error) {
-	return BuildMessageDefault(store, messageBuildData)
+func (store *memoryStore) BuildMessage(messageBuildData *BuildMessageInput) (output *BuildMessageOutput, err error) {
+	return store.buildMessage(store, messageBuildData)
 }
 
 type memoryStoreFactory struct{}
@@ -182,8 +165,3 @@ func NewMemoryStoreFactory() MessageStoreFactory { return memoryStoreFactory{} }
 
 // ErrAccessToClosedStore defines error on accessing to closed message store.
 var ErrAccessToClosedStore = errors.New("this store is already closed")
-
-// BuildMessageDefault returns builded message.
-func BuildMessageDefault(store MessageStore, messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error) {
-	return buildMessage(store, messageBuildData)
-}

@@ -106,6 +106,7 @@ func newSQLStore(sessionID SessionID, driver string, dataSourceName string, dbs 
 		sqlConnMaxIdle:     dbs.connMaxIdle,
 		sqlConnMaxOpen:     dbs.connMaxOpen,
 	}
+	store.store = store
 	store.cache.Reset()
 
 	if store.db, err = gorm.Open(store.sqlDriver, store.sqlDataSourceName); err != nil {
@@ -353,10 +354,21 @@ func (store *sqlStore) SaveMessageWithTx(messageBuildData *BuildMessageInput) (o
 			store.cache.SetNextSenderMsgSeqNum(outgoingSeqNum) // refresh
 		}
 
-		outputData, err := store.BuildMessage(messageBuildData)
+		input := *messageBuildData
+		input.IgnoreLogonReset = true
+		outputData, err := store.BuildMessage(&input)
 		if err != nil {
 			return err
 		}
+		if outputData.SentReset {
+			if err = store.resetWithTx(tx); err != nil {
+				return err
+			}
+			outputData.SeqNum = store.NextSenderMsgSeqNum()
+			outputData.Msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.SeqNum))
+			outputData.MsgBytes = outputData.Msg.build()
+		}
+
 		output = outputData // Response should also be returned in case of an error.
 		seqNum := store.cache.NextSenderMsgSeqNum()
 		if seqNum != output.SeqNum {
@@ -393,10 +405,6 @@ func (store *sqlStore) SaveMessageWithTx(messageBuildData *BuildMessageInput) (o
 		return
 	}
 	return output, nil
-}
-
-func (store *sqlStore) BuildMessage(messageBuildData *BuildMessageInput) (output *BuildMessageOutput, err error) {
-	return store.buildMessage(store, messageBuildData)
 }
 
 // Close closes the store's database connection

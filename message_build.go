@@ -2,6 +2,7 @@ package quickfix
 
 import (
 	"bytes"
+	"errors"
 	"time"
 )
 
@@ -14,16 +15,79 @@ type BuildMessageInput struct {
 	TimestampPrecision           TimestampPrecision
 	application                  *Application
 	logger                       *Log
+	IgnoreLogonReset             bool
 }
 
 // BuildMessageOutput stores build message output data
 type BuildMessageOutput struct {
 	MsgBytes  []byte
+	Msg       *Message
 	SentReset bool
 	SeqNum    int
 }
 
-type messageBuilder struct{}
+type messageBuilder struct {
+	store MessageStore
+}
+
+func (m messageBuilder) BuildMessage(bd *BuildMessageInput) (output *BuildMessageOutput, err error) {
+	if m.store == nil {
+		err = errors.New("failed to initialize. please to set store")
+		return
+	}
+	msg := bd.Msg
+	tmpErr := fillDefaultHeader(m.store, msg, bd.InReplyTo, bd.SessionID, bd.EnableLastMsgSeqNumProcessed, bd.TimestampPrecision)
+	if tmpErr != nil && bd.logger != nil {
+		(*bd.logger).OnEvent(err.Error())
+	}
+	outputData := BuildMessageOutput{}
+	outputData.SeqNum = m.store.NextSenderMsgSeqNum()
+	msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.SeqNum))
+
+	msgType, err := msg.Header.GetBytes(tagMsgType)
+	if err != nil {
+		return
+	}
+
+	if isAdminMessageType(msgType) {
+		if bd.application != nil {
+			(*bd.application).ToAdmin(msg, bd.SessionID)
+		}
+
+		if bytes.Equal(msgType, msgTypeLogon) {
+			var resetSeqNumFlag FIXBoolean
+			if msg.Body.Has(tagResetSeqNumFlag) {
+				if err = msg.Body.GetField(tagResetSeqNumFlag, &resetSeqNumFlag); err != nil {
+					return
+				}
+			}
+
+			if !resetSeqNumFlag.Bool() {
+				// do nothing
+			} else if bd.IgnoreLogonReset {
+				outputData.SentReset = true
+			} else {
+				if err = m.store.Reset(); err != nil {
+					return
+				}
+
+				outputData.SentReset = true
+				outputData.SeqNum = m.store.NextSenderMsgSeqNum()
+				msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.SeqNum))
+			}
+		}
+	} else if bd.application != nil {
+		if err = (*bd.application).ToApp(msg, bd.SessionID); err != nil {
+			return
+		}
+	}
+
+	outputData.MsgBytes = msg.build()
+	outputData.Msg = msg
+	output = &outputData
+
+	return
+}
 
 func insertSendingTime(msg *Message, sessionID SessionID, timestampPrecision TimestampPrecision) {
 	sendingTime := time.Now().UTC()
@@ -59,54 +123,4 @@ func fillDefaultHeader(store MessageStore, msg *Message, inReplyTo *Message, ses
 		}
 	}
 	return nil
-}
-
-func (m messageBuilder) buildMessage(store MessageStore, bd *BuildMessageInput) (output *BuildMessageOutput, err error) {
-	msg := bd.Msg
-	tmpErr := fillDefaultHeader(store, msg, bd.InReplyTo, bd.SessionID, bd.EnableLastMsgSeqNumProcessed, bd.TimestampPrecision)
-	if tmpErr != nil && bd.logger != nil {
-		(*bd.logger).OnEvent(err.Error())
-	}
-	outputData := BuildMessageOutput{}
-	outputData.SeqNum = store.NextSenderMsgSeqNum()
-	msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.SeqNum))
-
-	msgType, err := msg.Header.GetBytes(tagMsgType)
-	if err != nil {
-		return
-	}
-
-	if isAdminMessageType(msgType) {
-		if bd.application != nil {
-			(*bd.application).ToAdmin(msg, bd.SessionID)
-		}
-
-		if bytes.Equal(msgType, msgTypeLogon) {
-			var resetSeqNumFlag FIXBoolean
-			if msg.Body.Has(tagResetSeqNumFlag) {
-				if err = msg.Body.GetField(tagResetSeqNumFlag, &resetSeqNumFlag); err != nil {
-					return
-				}
-			}
-
-			if resetSeqNumFlag.Bool() {
-				if err = store.Reset(); err != nil {
-					return
-				}
-
-				outputData.SentReset = true
-				outputData.SeqNum = store.NextSenderMsgSeqNum()
-				msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.SeqNum))
-			}
-		}
-	} else if bd.application != nil {
-		if err = (*bd.application).ToApp(msg, bd.SessionID); err != nil {
-			return
-		}
-	}
-
-	outputData.MsgBytes = msg.build()
-	output = &outputData
-
-	return
 }

@@ -84,6 +84,7 @@ func newMongoStore(sessionID SessionID, mongoURL string, mongoDatabase string, m
 		messagesCollection: messagesCollection,
 		sessionsCollection: sessionsCollection,
 	}
+	store.store = store
 
 	if err = store.cache.Reset(); err != nil {
 		err = errors.Wrap(err, "cache reset")
@@ -323,10 +324,6 @@ func (store *mongoStore) SaveMessageWithTx(messageBuildData *BuildMessageInput) 
 
 	err = store.SaveMessage(output.SeqNum, output.MsgBytes)
 	return
-}
-
-func (store *mongoStore) BuildMessage(messageBuildData *BuildMessageInput) (output *BuildMessageOutput, err error) {
-	return store.buildMessage(store, messageBuildData)
 }
 
 // Close closes the store's database connection

@@ -87,6 +87,7 @@ func newFileStore(sessionID SessionID, dirname string) (*fileStore, error) {
 		senderSeqNumsFname: path.Join(dirname, fmt.Sprintf("%s.%s", sessionPrefix, "senderseqnums")),
 		targetSeqNumsFname: path.Join(dirname, fmt.Sprintf("%s.%s", sessionPrefix, "targetseqnums")),
 	}
+	store.store = store
 
 	if err := store.Refresh(); err != nil {
 		return nil, err
@@ -373,10 +374,6 @@ func (store *fileStore) SaveMessageWithTx(messageBuildData *BuildMessageInput) (
 
 	err = store.SaveMessage(output.SeqNum, output.MsgBytes)
 	return
-}
-
-func (store *fileStore) BuildMessage(messageBuildData *BuildMessageInput) (output *BuildMessageOutput, err error) {
-	return store.buildMessage(store, messageBuildData)
 }
 
 // Close closes the store's files

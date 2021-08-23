@@ -144,14 +144,11 @@ func (store *memoryStore) SaveMessageWithTx(messageBuildData *BuildMessageInput)
 	return
 }
 
-func (store *memoryStore) BuildMessage(messageBuildData *BuildMessageInput) (output *BuildMessageOutput, err error) {
-	return store.buildMessage(store, messageBuildData)
-}
-
 type memoryStoreFactory struct{}
 
 func (f memoryStoreFactory) Create(sessionID SessionID) (MessageStore, error) {
 	m := new(memoryStore)
+	m.store = m
 	if err := m.Reset(); err != nil {
 		return m, errors.Wrap(err, "reset")
 	}

@@ -271,6 +271,45 @@ func (f sessionFactory) newSession(
 	return
 }
 
+func setMessageSettings(settings *SessionSettings, sessionSetting *internal.SessionSettings, timestampPrecision *TimestampPrecision) (err error) {
+	if settings.HasSetting(config.EnableLastMsgSeqNumProcessed) {
+		if sessionSetting.EnableLastMsgSeqNumProcessed, err = settings.BoolSetting(config.EnableLastMsgSeqNumProcessed); err != nil {
+			return
+		}
+	}
+
+	if settings.HasSetting(config.PersistMessages) {
+		var persistMessages bool
+		if persistMessages, err = settings.BoolSetting(config.PersistMessages); err != nil {
+			return
+		}
+
+		sessionSetting.DisableMessagePersist = !persistMessages
+	}
+	if settings.HasSetting(config.TimeStampPrecision) {
+		var precisionStr string
+		if precisionStr, err = settings.Setting(config.TimeStampPrecision); err != nil {
+			return
+		}
+
+		switch precisionStr {
+		case "SECONDS":
+			*timestampPrecision = Seconds
+		case "MILLIS":
+			*timestampPrecision = Millis
+		case "MICROS":
+			*timestampPrecision = Micros
+		case "NANOS":
+			*timestampPrecision = Nanos
+
+		default:
+			err = IncorrectFormatForSetting{Setting: config.TimeStampPrecision, Value: precisionStr}
+			return
+		}
+	}
+	return
+}
+
 func (f sessionFactory) buildInitiatorSettings(session *session, settings *SessionSettings) error {
 	session.InitiateLogon = true
 

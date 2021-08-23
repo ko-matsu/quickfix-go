@@ -361,7 +361,7 @@ func (f *messageStoreAccessor) storeMessage(m Messagable, sessionID SessionID) (
 	sessionSettings := internal.SessionSettings{}
 	var timestampPrecision TimestampPrecision
 	if err = setMessageSettings(f.settings, &sessionSettings, &timestampPrecision); err != nil {
-		return
+		return err
 	}
 	if sessionSettings.DisableMessagePersist {
 		return errors.New("PersistMessages is N. store not supported")
@@ -370,7 +370,7 @@ func (f *messageStoreAccessor) storeMessage(m Messagable, sessionID SessionID) (
 	msg := m.ToMessage()
 	msgType, err := msg.Header.GetBytes(tagMsgType)
 	if err != nil {
-		return
+		return err
 	} else if isAdminMessageType(msgType) {
 		return errors.New("admin message not supported")
 	}
@@ -382,8 +382,5 @@ func (f *messageStoreAccessor) storeMessage(m Messagable, sessionID SessionID) (
 		TimestampPrecision:           timestampPrecision,
 	}
 	_, err = store.SaveMessageWithTx(&data)
-	if err != nil {
-		return
-	}
-	return
+	return err
 }

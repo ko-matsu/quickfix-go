@@ -131,10 +131,10 @@ func (store *sqlStore) Reset() (err error) {
 	if store.db == nil {
 		return ErrAccessToClosedStore
 	}
-	return store.resetWithTx(store.db)
+	return store.reset(store.db)
 }
 
-func (store *sqlStore) resetWithTx(tx *gorm.DB) (err error) {
+func (store *sqlStore) reset(tx *gorm.DB) (err error) {
 	s := store.sessionID
 	if err = tx.Exec(`DELETE FROM messages
 		WHERE beginstring = ? AND session_qualifier = ?
@@ -361,7 +361,7 @@ func (store *sqlStore) SaveMessageWithTx(messageBuildData *BuildMessageInput) (o
 			return err
 		}
 		if outputData.SentReset {
-			if err = store.resetWithTx(tx); err != nil {
+			if err = store.reset(tx); err != nil {
 				return err
 			}
 			outputData.SeqNum = store.NextSenderMsgSeqNum()
@@ -401,6 +401,7 @@ func (store *sqlStore) SaveMessageWithTx(messageBuildData *BuildMessageInput) (o
 		return store.cache.SetNextSenderMsgSeqNum(nextSeqNum)
 	})
 	if err != nil {
+		_ = store.Refresh()
 		// Response should also be returned in case of an error.
 		return
 	}

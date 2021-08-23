@@ -73,15 +73,13 @@ func (m *messageBuilder) BuildMessage(bd *BuildMessageInput) (output *BuildMessa
 				}
 			}
 
-			if !resetSeqNumFlag.Bool() {
-				// do nothing
-			} else if bd.IgnoreLogonReset {
+			switch {
+			case resetSeqNumFlag.Bool() && bd.IgnoreLogonReset:
 				outputData.SentReset = true
-			} else {
+			case resetSeqNumFlag.Bool():
 				if err = m.store.Reset(); err != nil {
 					return
 				}
-
 				outputData.SentReset = true
 				outputData.SeqNum = m.store.NextSenderMsgSeqNum()
 				msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.SeqNum))

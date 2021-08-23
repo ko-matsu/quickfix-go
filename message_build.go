@@ -13,17 +13,16 @@ type BuildMessageInput struct {
 	SessionID                    SessionID
 	EnableLastMsgSeqNumProcessed bool
 	TimestampPrecision           TimestampPrecision
-	application                  Application
-	logger                       Log
 	IgnoreLogonReset             bool
 }
 
 // BuildMessageOutput stores build message output data
 type BuildMessageOutput struct {
-	MsgBytes  []byte
-	Msg       *Message
-	SentReset bool
-	SeqNum    int
+	MsgBytes     []byte
+	Msg          *Message
+	SentReset    bool
+	SeqNum       int
+	ErrorsForLog []error
 }
 
 type MsgSeqNumCursor interface {
@@ -47,13 +46,13 @@ func (m *messageBuilder) BuildMessage(bd *BuildMessageInput) (output *BuildMessa
 		return
 	}
 	msg := bd.Msg
-	tmpErr := fillDefaultHeader(m.store, msg, bd.InReplyTo, bd.SessionID, bd.EnableLastMsgSeqNumProcessed, bd.TimestampPrecision)
-	if tmpErr != nil && bd.logger != nil {
-		bd.logger.OnEvent(err.Error())
-	}
 	outputData := BuildMessageOutput{}
+	tmpErr := fillDefaultHeader(m.store, msg, bd.InReplyTo, bd.SessionID, bd.EnableLastMsgSeqNumProcessed, bd.TimestampPrecision)
+	outputData.AddErrorForLog(tmpErr)
 	outputData.SeqNum = m.store.NextSenderMsgSeqNum()
 	msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.SeqNum))
+	outputData.Msg = msg
+	output = &outputData
 
 	msgType, err := msg.Header.GetBytes(tagMsgType)
 	if err != nil {
@@ -61,10 +60,6 @@ func (m *messageBuilder) BuildMessage(bd *BuildMessageInput) (output *BuildMessa
 	}
 
 	if isAdminMessageType(msgType) {
-		if bd.application != nil {
-			bd.application.ToAdmin(msg, bd.SessionID)
-		}
-
 		if bytes.Equal(msgType, msgTypeLogon) {
 			var resetSeqNumFlag FIXBoolean
 			if msg.Body.Has(tagResetSeqNumFlag) {
@@ -85,17 +80,36 @@ func (m *messageBuilder) BuildMessage(bd *BuildMessageInput) (output *BuildMessa
 				msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.SeqNum))
 			}
 		}
-	} else if bd.application != nil {
-		if err = bd.application.ToApp(msg, bd.SessionID); err != nil {
-			return
-		}
 	}
 
 	outputData.MsgBytes = msg.build()
 	outputData.Msg = msg
-	output = &outputData
 
 	return
+}
+
+func (b *BuildMessageOutput) AddErrorForLog(err error) {
+	if err == nil {
+		return
+	}
+	if len(b.ErrorsForLog) == 0 {
+		b.ErrorsForLog = make([]error, 0, 1)
+	}
+	b.ErrorsForLog = append(b.ErrorsForLog, err)
+}
+
+func (b *BuildMessageOutput) GetErrorsForLog() []error {
+	if b == nil {
+		return nil
+	}
+	return b.ErrorsForLog
+}
+
+func (b *BuildMessageOutput) IsSentReset() bool {
+	if b == nil {
+		return false
+	}
+	return b.SentReset
 }
 
 func insertSendingTime(msg *Message, sessionID SessionID, timestampPrecision TimestampPrecision) {

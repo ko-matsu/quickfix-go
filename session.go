@@ -262,16 +262,34 @@ func (s *session) dropAndSendInReplyTo(msg *Message, inReplyTo *Message) error {
 }
 
 func (s *session) prepMessageForSend(msg *Message, inReplyTo *Message) (msgBytes []byte, err error) {
+	msgType, err := msg.Header.GetBytes(tagMsgType)
+	if err != nil {
+		return
+	}
+
 	data := BuildMessageInput{
 		Msg:                          msg,
 		InReplyTo:                    inReplyTo,
 		SessionID:                    s.sessionID,
-		application:                  s.application,
-		logger:                       s.log,
 		EnableLastMsgSeqNumProcessed: s.SessionSettings.EnableLastMsgSeqNumProcessed,
 		TimestampPrecision:           s.timestampPrecision,
 	}
-	var output *BuildMessageOutput
+	preBuildData := data
+	preBuildData.IgnoreLogonReset = true
+	output, err := s.store.BuildMessage(&preBuildData)
+	for _, errElem := range output.GetErrorsForLog() {
+		s.logError(errElem)
+	}
+	switch {
+	case err != nil:
+		return
+	case isAdminMessageType(msgType):
+		s.application.ToAdmin(output.Msg, s.sessionID)
+	default:
+		if err = s.application.ToApp(output.Msg, s.sessionID); err != nil {
+			return
+		}
+	}
 
 	if !s.DisableMessagePersist {
 		output, err = s.store.SaveMessageWithTx(&data)
@@ -283,8 +301,8 @@ func (s *session) prepMessageForSend(msg *Message, inReplyTo *Message) (msgBytes
 		err = s.store.IncrNextSenderMsgSeqNum()
 	}
 
-	if output != nil && output.SentReset { // check for error
-		s.sentReset = output.SentReset
+	if output.IsSentReset() { // check for error
+		s.sentReset = true
 	}
 	if err != nil {
 		return

@@ -26,18 +26,9 @@ type MessageStore interface {
 	Reset() error
 
 	Close() error
-}
 
-// MessageTxStore defines save transaction message
-type MessageTxStore interface {
-	MessageStore
-
-	BuildAndSaveMessage(
-		messageBuildData *MessageBuildData,
-		buildFunc func(MessageStore, *MessageBuildData, interface{}) (*MessageBuildOutputData, error),
-	) (output *MessageBuildOutputData, err error)
-
-	ResetByTx(tx interface{}) error
+	SaveMessageWithTx(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error)
+	BuildMessage(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error)
 }
 
 // MessageBuildData stores for building message data
@@ -156,6 +147,24 @@ func (store *memoryStore) GetMessages(beginSeqNum, endSeqNum int) ([][]byte, err
 	return msgs, nil
 }
 
+func (store *memoryStore) SaveMessageWithTx(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error) {
+	output, err = store.BuildMessage(messageBuildData)
+	if err != nil {
+		return
+	}
+	err = store.IncrNextSenderMsgSeqNum()
+	if err != nil {
+		return
+	}
+
+	err = store.SaveMessage(output.SeqNum, output.MsgBytes)
+	return
+}
+
+func (store *memoryStore) BuildMessage(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error) {
+	return BuildMessageDefault(store, messageBuildData)
+}
+
 type memoryStoreFactory struct{}
 
 func (f memoryStoreFactory) Create(sessionID SessionID) (MessageStore, error) {
@@ -173,3 +182,8 @@ func NewMemoryStoreFactory() MessageStoreFactory { return memoryStoreFactory{} }
 
 // ErrAccessToClosedStore defines error on accessing to closed message store.
 var ErrAccessToClosedStore = errors.New("this store is already closed")
+
+// BuildMessageDefault returns builded message.
+func BuildMessageDefault(store MessageStore, messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error) {
+	return buildMessage(store, messageBuildData)
+}

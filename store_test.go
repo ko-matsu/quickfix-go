@@ -220,11 +220,6 @@ func (suite *MessageStoreTestSuite) TestMessageStore_Close_After() {
 func (suite *MessageStoreTestSuite) TestMessageTxStore_BuildAndSaveMessage() {
 	t := suite.T()
 
-	msgTxStore, ok := suite.msgStore.(MessageTxStore)
-	if !ok {
-		suite.T().Skip()
-	}
-
 	createMsgFn := func() *Message {
 		message := NewMessage()
 		message.Header.SetString(35, "BE")
@@ -245,19 +240,14 @@ func (suite *MessageStoreTestSuite) TestMessageTxStore_BuildAndSaveMessage() {
 	for i, msg := range arr {
 		tmpData := data
 		tmpData.Msg = msg
-		_, err := msgTxStore.BuildAndSaveMessage(&tmpData, buildMessage)
+		_, err := suite.msgStore.SaveMessageWithTx(&tmpData)
 		assert.NoError(t, err)
-		assert.Equal(t, 2+i, msgTxStore.NextSenderMsgSeqNum())
+		assert.Equal(t, 2+i, suite.msgStore.NextSenderMsgSeqNum())
 	}
 }
 
 func (suite *MessageStoreTestSuite) TestMessageTxStore_BuildAndSaveMessage_ResetTx() {
 	t := suite.T()
-
-	msgTxStore, ok := suite.msgStore.(MessageTxStore)
-	if !ok {
-		suite.T().Skip()
-	}
 
 	createMsgFn := func() *Message {
 		message := NewMessage()
@@ -275,11 +265,11 @@ func (suite *MessageStoreTestSuite) TestMessageTxStore_BuildAndSaveMessage_Reset
 	}
 	msg.Body.SetBool(141, true) // reset
 
-	_, err := msgTxStore.BuildAndSaveMessage(&data, buildMessage)
+	_, err := suite.msgStore.SaveMessageWithTx(&data)
 	assert.NoError(t, err)
-	assert.Equal(t, 2, msgTxStore.NextSenderMsgSeqNum())
+	assert.Equal(t, 2, suite.msgStore.NextSenderMsgSeqNum())
 
-	_, err = msgTxStore.BuildAndSaveMessage(&data, buildMessage)
+	_, err = suite.msgStore.SaveMessageWithTx(&data)
 	assert.NoError(t, err)
-	assert.Equal(t, 2, msgTxStore.NextSenderMsgSeqNum())
+	assert.Equal(t, 2, suite.msgStore.NextSenderMsgSeqNum())
 }

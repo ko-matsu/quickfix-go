@@ -358,11 +358,6 @@ func (f *messageStoreAccessor) storeMessage(m Messagable, sessionID SessionID) (
 	}
 	defer store.Close()
 
-	txStore, ok := store.(MessageTxStore)
-	if !ok {
-		return errors.New("this store is not implements MessageTxStore")
-	}
-
 	sessionSettings := internal.SessionSettings{}
 	var timestampPrecision TimestampPrecision
 	if err = setMessageSettings(f.settings, &sessionSettings, &timestampPrecision); err != nil {
@@ -386,7 +381,7 @@ func (f *messageStoreAccessor) storeMessage(m Messagable, sessionID SessionID) (
 		EnableLastMsgSeqNumProcessed: sessionSettings.EnableLastMsgSeqNumProcessed,
 		TimestampPrecision:           timestampPrecision,
 	}
-	_, err = txStore.BuildAndSaveMessage(&data, buildMessage)
+	_, err = store.SaveMessageWithTx(&data)
 	if err != nil {
 		return
 	}

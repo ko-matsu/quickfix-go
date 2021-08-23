@@ -309,30 +309,28 @@ func (s *session) prepMessageForSend(msg *Message, inReplyTo *Message) (msgBytes
 		TimestampPrecision:           s.timestampPrecision,
 	}
 	var output *MessageBuildOutputData
-	if txStore, ok := s.store.(MessageTxStore); ok && !s.DisableMessagePersist {
-		output, err = txStore.BuildAndSaveMessage(&data, buildMessage)
-		if output != nil && output.SentReset { // check for error
-			s.sentReset = output.SentReset
-		}
+
+	if !s.DisableMessagePersist {
+		output, err = s.store.SaveMessageWithTx(&data)
 	} else {
-		output, err = buildMessage(s.store, &data, nil)
+		output, err = s.store.BuildMessage(&data)
 		if err != nil {
 			return
 		}
-		if output.SentReset {
-			s.sentReset = output.SentReset
-		}
-		err = s.persist(output.SeqNum, output.MsgBytes)
+		err = s.store.IncrNextSenderMsgSeqNum()
+	}
+
+	if output != nil && output.SentReset { // check for error
+		s.sentReset = output.SentReset
 	}
 	if err != nil {
 		return
 	}
-
 	msgBytes = output.MsgBytes
 	return
 }
 
-func buildMessage(store MessageStore, bd *MessageBuildData, tx interface{}) (output *MessageBuildOutputData, err error) {
+func buildMessage(store MessageStore, bd *MessageBuildData) (output *MessageBuildOutputData, err error) {
 	msg := bd.Msg
 	tmpErr := fillDefaultHeader(store, msg, bd.InReplyTo, bd.SessionID, bd.EnableLastMsgSeqNumProcessed, bd.TimestampPrecision)
 	if tmpErr != nil && bd.logger != nil {
@@ -361,14 +359,8 @@ func buildMessage(store MessageStore, bd *MessageBuildData, tx interface{}) (out
 			}
 
 			if resetSeqNumFlag.Bool() {
-				if txStore, ok := store.(MessageTxStore); ok {
-					if err = txStore.ResetByTx(tx); err != nil {
-						return
-					}
-				} else {
-					if err = store.Reset(); err != nil {
-						return
-					}
+				if err = store.Reset(); err != nil {
+					return
 				}
 
 				outputData.SentReset = true
@@ -385,19 +377,6 @@ func buildMessage(store MessageStore, bd *MessageBuildData, tx interface{}) (out
 	outputData.MsgBytes = msg.build()
 	output = &outputData
 
-	return
-}
-
-func (s *session) persist(seqNum int, msgBytes []byte) (err error) {
-	if !s.DisableMessagePersist {
-		err = s.store.IncrNextSenderMsgSeqNum()
-		if err != nil {
-			return
-		}
-		err = s.store.SaveMessage(seqNum, msgBytes)
-	} else {
-		err = s.store.IncrNextSenderMsgSeqNum()
-	}
 	return
 }
 

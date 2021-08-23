@@ -2,6 +2,7 @@ package quickfix
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -22,7 +23,9 @@ type sqlStore struct {
 	sqlConnMaxIdle     int
 	sqlConnMaxOpen     int
 	db                 *gorm.DB
-	dbSettings         dbSettings
+
+	// cache
+	tx *gorm.DB
 }
 
 type dbSettings struct {
@@ -38,19 +41,6 @@ func NewSQLStoreFactory(settings *Settings) MessageStoreFactory {
 
 // Create creates a new SQLStore implementation of the MessageStore interface
 func (f sqlStoreFactory) Create(sessionID SessionID) (msgStore MessageStore, err error) {
-	store, err := f.create(sessionID)
-	if err != nil {
-		return
-	}
-	err = store.open()
-	if err != nil {
-		return
-	}
-	msgStore = store
-	return
-}
-
-func (f sqlStoreFactory) create(sessionID SessionID) (msgStore *sqlStore, err error) {
 	var sqlDriver string
 	var sqlDataSourceName string
 	sqlConnMaxLifetime := 0 * time.Second
@@ -100,40 +90,40 @@ func (f sqlStoreFactory) create(sessionID SessionID) (msgStore *sqlStore, err er
 	} else if len(sqlDataSourceName) == 0 {
 		return nil, fmt.Errorf("SQLStoreDataSourceName configuration is not found. session: %v", sessionID)
 	}
-	return &sqlStore{
-		sessionID:          sessionID,
-		cache:              &memoryStore{},
-		sqlDriver:          sqlDriver,
-		sqlDataSourceName:  sqlDataSourceName,
-		sqlConnMaxLifetime: sqlConnMaxLifetime,
-		sqlConnMaxIdle:     sqlConnMaxIdle,
-		sqlConnMaxOpen:     sqlConnMaxOpen,
-		dbSettings: dbSettings{
+	return newSQLStore(sessionID, sqlDriver, sqlDataSourceName, dbSettings{
 			connMaxLifetime: sqlConnMaxLifetime,
 			connMaxIdle:     sqlConnMaxIdle,
 			connMaxOpen:     sqlConnMaxOpen,
-		},
-	}, nil
+	})
 }
 
-// open returns database open results.
-func (store *sqlStore) open() (err error) {
+func newSQLStore(sessionID SessionID, driver string, dataSourceName string, dbs dbSettings) (store *sqlStore, err error) {
+	store = &sqlStore{
+		sessionID:          sessionID,
+		cache:              &memoryStore{},
+		sqlDriver:          driver,
+		sqlDataSourceName:  dataSourceName,
+		sqlConnMaxLifetime: dbs.connMaxLifetime,
+		sqlConnMaxIdle:     dbs.connMaxIdle,
+		sqlConnMaxOpen:     dbs.connMaxOpen,
+	}
 	store.cache.Reset()
 
 	if store.db, err = gorm.Open(store.sqlDriver, store.sqlDataSourceName); err != nil {
-		return
+		return nil, err
 	}
-	store.db.DB().SetConnMaxLifetime(store.dbSettings.connMaxLifetime)
-	store.db.DB().SetMaxIdleConns(store.dbSettings.connMaxIdle)
-	store.db.DB().SetMaxOpenConns(store.dbSettings.connMaxOpen)
+	store.db.DB().SetConnMaxLifetime(dbs.connMaxLifetime)
+	store.db.DB().SetMaxIdleConns(dbs.connMaxIdle)
+	store.db.DB().SetMaxOpenConns(dbs.connMaxOpen)
 
 	if err = store.db.DB().Ping(); err != nil { // ensure immediate connection
-		return
+		return nil, err
 	}
 	if err = store.populateCache(); err != nil {
-		return
+		return nil, err
 	}
-	return
+
+	return store, nil
 }
 
 // Reset deletes the store records and sets the seqnums back to 1
@@ -141,8 +131,13 @@ func (store *sqlStore) Reset() (err error) {
 	if store.db == nil {
 		return ErrAccessToClosedStore
 	}
+	tx := store.db
+	if store.tx != nil {
+		tx = store.tx
+	}
+
 	s := store.sessionID
-	if err = store.db.Exec(`DELETE FROM messages
+	if err = tx.Exec(`DELETE FROM messages
 		WHERE beginstring = ? AND session_qualifier = ?
 		AND sendercompid = ? AND sendersubid = ? AND senderlocid = ?
 		AND targetcompid = ? AND targetsubid = ? AND targetlocid = ?`,
@@ -156,7 +151,7 @@ func (store *sqlStore) Reset() (err error) {
 		return err
 	}
 
-	return store.db.Exec(`UPDATE sessions
+	return tx.Exec(`UPDATE sessions
 		SET creation_time = ?, incoming_seqnum = ?, outgoing_seqnum = ?
 		WHERE beginstring = ? AND session_qualifier = ?
 		AND sendercompid= ? AND sendersubid = ? AND senderlocid = ?
@@ -335,6 +330,77 @@ func (store *sqlStore) GetMessages(beginSeqNum, endSeqNum int) ([][]byte, error)
 	}
 
 	return msgs, nil
+}
+
+func (store *sqlStore) SaveMessageWithTx(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error) {
+	if store.db == nil {
+		return nil, ErrAccessToClosedStore
+	}
+	s := store.sessionID
+
+	err = store.db.Transaction(func(tx *gorm.DB) error {
+		var outgoingSeqNum int
+		row := tx.Raw(`SELECT outgoing_seqnum FROM sessions
+			WHERE beginstring = ? AND session_qualifier = ?
+			AND sendercompid = ? AND sendersubid = ? AND senderlocid = ?
+			AND targetcompid = ? AND targetsubid = ? AND targetlocid = ?`,
+			s.BeginString, s.Qualifier,
+			s.SenderCompID, s.SenderSubID, s.SenderLocationID,
+			s.TargetCompID, s.TargetSubID, s.TargetLocationID).Row()
+
+		if err := row.Scan(&outgoingSeqNum); err != nil {
+			return err
+		}
+		if outgoingSeqNum != store.cache.NextSenderMsgSeqNum() {
+			store.cache.SetNextSenderMsgSeqNum(outgoingSeqNum) // refresh
+		}
+
+		store.tx = tx
+		outputData, err := store.BuildMessage(messageBuildData)
+		store.tx = nil
+		if err != nil {
+			return err
+		}
+		output = outputData // Response should also be returned in case of an error.
+		seqNum := store.cache.NextSenderMsgSeqNum()
+		if seqNum != output.SeqNum {
+			return errors.New("internal error: unmatch seqnum")
+		}
+		nextSeqNum := seqNum + 1
+
+		if err := tx.Exec(`INSERT INTO messages (
+			msgseqnum, message,
+			beginstring, session_qualifier,
+			sendercompid, sendersubid, senderlocid,
+			targetcompid, targetsubid, targetlocid)
+			VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			seqNum, string(outputData.MsgBytes),
+			s.BeginString, s.Qualifier,
+			s.SenderCompID, s.SenderSubID, s.SenderLocationID,
+			s.TargetCompID, s.TargetSubID, s.TargetLocationID).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Exec(`UPDATE sessions SET outgoing_seqnum = ?
+			WHERE beginstring = ? AND session_qualifier = ?
+			AND sendercompid = ? AND sendersubid = ? AND senderlocid = ?
+			AND targetcompid = ? AND targetsubid = ? AND targetlocid = ?`,
+			nextSeqNum, s.BeginString, s.Qualifier,
+			s.SenderCompID, s.SenderSubID, s.SenderLocationID,
+			s.TargetCompID, s.TargetSubID, s.TargetLocationID).Error; err != nil {
+			return err
+		}
+		return store.cache.SetNextSenderMsgSeqNum(nextSeqNum)
+	})
+	if err != nil {
+		// Response should also be returned in case of an error.
+		return
+	}
+	return output, nil
+}
+
+func (store *sqlStore) BuildMessage(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error) {
+	return BuildMessageDefault(store, messageBuildData)
 }
 
 // Close closes the store's database connection

@@ -360,6 +360,24 @@ func (store *fileStore) GetMessages(beginSeqNum, endSeqNum int) ([][]byte, error
 	return msgs, nil
 }
 
+func (store *fileStore) SaveMessageWithTx(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error) {
+	output, err = store.BuildMessage(messageBuildData)
+	if err != nil {
+		return
+	}
+	err = store.IncrNextSenderMsgSeqNum()
+	if err != nil {
+		return
+	}
+
+	err = store.SaveMessage(output.SeqNum, output.MsgBytes)
+	return
+}
+
+func (store *fileStore) BuildMessage(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error) {
+	return BuildMessageDefault(store, messageBuildData)
+}
+
 // Close closes the store's files
 func (store *fileStore) Close() error {
 	store.isClosed = true

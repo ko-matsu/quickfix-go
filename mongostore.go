@@ -309,6 +309,24 @@ func (store *mongoStore) GetMessages(beginSeqNum, endSeqNum int) (msgs [][]byte,
 	return
 }
 
+func (store *mongoStore) SaveMessageWithTx(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error) {
+	output, err = store.BuildMessage(messageBuildData)
+	if err != nil {
+		return
+	}
+	err = store.IncrNextSenderMsgSeqNum()
+	if err != nil {
+		return
+	}
+
+	err = store.SaveMessage(output.SeqNum, output.MsgBytes)
+	return
+}
+
+func (store *mongoStore) BuildMessage(messageBuildData *MessageBuildData) (output *MessageBuildOutputData, err error) {
+	return BuildMessageDefault(store, messageBuildData)
+}
+
 // Close closes the store's database connection
 func (store *mongoStore) Close() error {
 	if store.db != nil {

@@ -217,7 +217,7 @@ func (suite *MessageStoreTestSuite) TestMessageStore_Close_After() {
 	require.Equal(t, err, ErrAccessToClosedStore)
 }
 
-func (suite *MessageStoreTestSuite) TestMessageTxStore_BuildAndSaveMessage() {
+func (suite *MessageStoreTestSuite) TestMessageTxStore_SaveMessageWithTx() {
 	t := suite.T()
 
 	createMsgFn := func() *Message {
@@ -246,7 +246,7 @@ func (suite *MessageStoreTestSuite) TestMessageTxStore_BuildAndSaveMessage() {
 	}
 }
 
-func (suite *MessageStoreTestSuite) TestMessageTxStore_BuildAndSaveMessage_ResetTx() {
+func (suite *MessageStoreTestSuite) TestMessageTxStore_SaveMessageWithTx_ResetLogon() {
 	t := suite.T()
 
 	createMsgFn := func() *Message {

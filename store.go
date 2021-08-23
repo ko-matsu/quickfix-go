@@ -42,7 +42,7 @@ type memoryStore struct {
 	messageMap                       map[int][]byte
 
 	isClosed bool
-	messageBuilder
+	*messageBuilder
 }
 
 func (store *memoryStore) NextSenderMsgSeqNum() int {
@@ -148,7 +148,7 @@ type memoryStoreFactory struct{}
 
 func (f memoryStoreFactory) Create(sessionID SessionID) (MessageStore, error) {
 	m := new(memoryStore)
-	m.store = m
+	m.messageBuilder = newMessageBuilder(m)
 	if err := m.Reset(); err != nil {
 		return m, errors.Wrap(err, "reset")
 	}

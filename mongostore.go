@@ -25,7 +25,7 @@ type mongoStore struct {
 	messagesCollection string
 	sessionsCollection string
 
-	messageBuilder
+	*messageBuilder
 }
 
 // NewMongoStoreFactory returns a mongo-based implementation of MessageStoreFactory
@@ -84,7 +84,7 @@ func newMongoStore(sessionID SessionID, mongoURL string, mongoDatabase string, m
 		messagesCollection: messagesCollection,
 		sessionsCollection: sessionsCollection,
 	}
-	store.store = store
+	store.messageBuilder = newMessageBuilder(store)
 
 	if err = store.cache.Reset(); err != nil {
 		err = errors.Wrap(err, "cache reset")

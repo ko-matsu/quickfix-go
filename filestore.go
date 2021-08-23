@@ -38,7 +38,7 @@ type fileStore struct {
 	targetSeqNumsFile  *os.File
 
 	isClosed bool
-	messageBuilder
+	*messageBuilder
 }
 
 // NewFileStoreFactory returns a file-based implementation of MessageStoreFactory
@@ -87,7 +87,7 @@ func newFileStore(sessionID SessionID, dirname string) (*fileStore, error) {
 		senderSeqNumsFname: path.Join(dirname, fmt.Sprintf("%s.%s", sessionPrefix, "senderseqnums")),
 		targetSeqNumsFname: path.Join(dirname, fmt.Sprintf("%s.%s", sessionPrefix, "targetseqnums")),
 	}
-	store.store = store
+	store.messageBuilder = newMessageBuilder(store)
 
 	if err := store.Refresh(); err != nil {
 		return nil, err

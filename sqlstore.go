@@ -24,7 +24,7 @@ type sqlStore struct {
 	sqlConnMaxOpen     int
 	db                 *gorm.DB
 
-	messageBuilder
+	*messageBuilder
 }
 
 type dbSettings struct {
@@ -106,7 +106,7 @@ func newSQLStore(sessionID SessionID, driver string, dataSourceName string, dbs 
 		sqlConnMaxIdle:     dbs.connMaxIdle,
 		sqlConnMaxOpen:     dbs.connMaxOpen,
 	}
-	store.store = store
+	store.messageBuilder = newMessageBuilder(store)
 	store.cache.Reset()
 
 	if store.db, err = gorm.Open(store.sqlDriver, store.sqlDataSourceName); err != nil {

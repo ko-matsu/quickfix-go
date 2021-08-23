@@ -13,8 +13,8 @@ type BuildMessageInput struct {
 	SessionID                    SessionID
 	EnableLastMsgSeqNumProcessed bool
 	TimestampPrecision           TimestampPrecision
-	application                  *Application
-	logger                       *Log
+	application                  Application
+	logger                       Log
 	IgnoreLogonReset             bool
 }
 
@@ -26,19 +26,30 @@ type BuildMessageOutput struct {
 	SeqNum    int
 }
 
-type messageBuilder struct {
-	store MessageStore
+type MsgSeqNumCursor interface {
+	NextSenderMsgSeqNum() int
+	NextTargetMsgSeqNum() int
+
+	Reset() error
 }
 
-func (m messageBuilder) BuildMessage(bd *BuildMessageInput) (output *BuildMessageOutput, err error) {
-	if m.store == nil {
+type messageBuilder struct {
+	store MsgSeqNumCursor
+}
+
+func newMessageBuilder(store MsgSeqNumCursor) *messageBuilder {
+	return &messageBuilder{store}
+}
+
+func (m *messageBuilder) BuildMessage(bd *BuildMessageInput) (output *BuildMessageOutput, err error) {
+	if m == nil || m.store == nil {
 		err = errors.New("failed to initialize. please to set store")
 		return
 	}
 	msg := bd.Msg
 	tmpErr := fillDefaultHeader(m.store, msg, bd.InReplyTo, bd.SessionID, bd.EnableLastMsgSeqNumProcessed, bd.TimestampPrecision)
 	if tmpErr != nil && bd.logger != nil {
-		(*bd.logger).OnEvent(err.Error())
+		bd.logger.OnEvent(err.Error())
 	}
 	outputData := BuildMessageOutput{}
 	outputData.SeqNum = m.store.NextSenderMsgSeqNum()
@@ -51,7 +62,7 @@ func (m messageBuilder) BuildMessage(bd *BuildMessageInput) (output *BuildMessag
 
 	if isAdminMessageType(msgType) {
 		if bd.application != nil {
-			(*bd.application).ToAdmin(msg, bd.SessionID)
+			bd.application.ToAdmin(msg, bd.SessionID)
 		}
 
 		if bytes.Equal(msgType, msgTypeLogon) {
@@ -77,7 +88,7 @@ func (m messageBuilder) BuildMessage(bd *BuildMessageInput) (output *BuildMessag
 			}
 		}
 	} else if bd.application != nil {
-		if err = (*bd.application).ToApp(msg, bd.SessionID); err != nil {
+		if err = bd.application.ToApp(msg, bd.SessionID); err != nil {
 			return
 		}
 	}
@@ -99,7 +110,7 @@ func insertSendingTime(msg *Message, sessionID SessionID, timestampPrecision Tim
 	}
 }
 
-func fillDefaultHeader(store MessageStore, msg *Message, inReplyTo *Message, sessionID SessionID, enableLastMsgSeqNumProcessed bool, timestampPrecision TimestampPrecision) error {
+func fillDefaultHeader(store MsgSeqNumCursor, msg *Message, inReplyTo *Message, sessionID SessionID, enableLastMsgSeqNumProcessed bool, timestampPrecision TimestampPrecision) error {
 	msg.Header.SetString(tagBeginString, sessionID.BeginString)
 	msg.Header.SetString(tagSenderCompID, sessionID.SenderCompID)
 	optionallySetID(msg, tagSenderSubID, sessionID.SenderSubID)

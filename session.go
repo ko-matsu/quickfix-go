@@ -267,8 +267,8 @@ func (s *session) prepMessageForSend(msg *Message, inReplyTo *Message) (msgBytes
 		Msg:                          msg,
 		InReplyTo:                    inReplyTo,
 		SessionID:                    s.sessionID,
-		application:                  &s.application,
-		logger:                       &s.log,
+		application:                  s.application,
+		logger:                       s.log,
 		EnableLastMsgSeqNumProcessed: s.SessionSettings.EnableLastMsgSeqNumProcessed,
 		TimestampPrecision:           s.timestampPrecision,
 	}

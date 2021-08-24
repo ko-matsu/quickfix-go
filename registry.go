@@ -374,12 +374,11 @@ func (f *messageStoreAccessor) storeMessage(m Messagable, sessionID SessionID) (
 	} else if isAdminMessageType(msgType) {
 		return errors.New("admin message not supported")
 	}
+	fillDefaultHeader(msg, nil, sessionID, -1, timestampPrecision)
 
 	data := BuildMessageInput{
 		Msg:                          msg,
-		SessionID:                    sessionID,
 		EnableLastMsgSeqNumProcessed: sessionSettings.EnableLastMsgSeqNumProcessed,
-		TimestampPrecision:           timestampPrecision,
 	}
 	_, err = store.SaveMessageWithTx(&data)
 	return err

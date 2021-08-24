@@ -355,15 +355,16 @@ func (store *sqlStore) SaveMessageWithTx(messageBuildData *BuildMessageInput) (o
 		}
 
 		input := *messageBuildData
-		input.IgnoreLogonReset = true
+		input.IsResetSeqNum = false // For execute store.reset(tx) after BuildMessage is executed.
 		outputData, err := store.BuildMessage(&input)
 		if err != nil {
 			return err
 		}
-		if outputData.SentReset {
+		if messageBuildData.IsResetSeqNum {
 			if err = store.reset(tx); err != nil {
 				return err
 			}
+			outputData.SentReset = true
 			outputData.SeqNum = store.NextSenderMsgSeqNum()
 			outputData.Msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.SeqNum))
 			outputData.MsgBytes = outputData.Msg.build()

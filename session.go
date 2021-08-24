@@ -108,10 +108,18 @@ func optionallySetID(msg *Message, field Tag, value string) {
 }
 
 func (s *session) fillDefaultHeader(msg *Message, inReplyTo *Message) {
-	err := fillDefaultHeader(s.store, msg, inReplyTo, s.sessionID, s.EnableLastMsgSeqNumProcessed, s.timestampPrecision)
-	if err != nil {
-		s.logError(err)
+	var err error
+	lastSeqNum := -1
+	if s.EnableLastMsgSeqNumProcessed {
+		if inReplyTo != nil {
+			if lastSeqNum, err = inReplyTo.Header.GetInt(tagMsgSeqNum); err != nil {
+				s.logError(err)
+			}
+		} else {
+			msg.Header.SetInt(tagLastMsgSeqNumProcessed, s.store.NextTargetMsgSeqNum()-1)
+		}
 	}
+	fillDefaultHeader(msg, inReplyTo, s.sessionID, lastSeqNum, s.timestampPrecision)
 }
 
 func (s *session) shouldSendReset() bool {
@@ -262,35 +270,37 @@ func (s *session) dropAndSendInReplyTo(msg *Message, inReplyTo *Message) error {
 }
 
 func (s *session) prepMessageForSend(msg *Message, inReplyTo *Message) (msgBytes []byte, err error) {
+	s.fillDefaultHeader(msg, inReplyTo)
+	seqNum := s.store.NextSenderMsgSeqNum()
+	msg.Header.SetField(tagMsgSeqNum, FIXInt(seqNum))
+
 	msgType, err := msg.Header.GetBytes(tagMsgType)
 	if err != nil {
 		return
 	}
 
-	data := BuildMessageInput{
-		Msg:                          msg,
-		InReplyTo:                    inReplyTo,
-		SessionID:                    s.sessionID,
-		EnableLastMsgSeqNumProcessed: s.SessionSettings.EnableLastMsgSeqNumProcessed,
-		TimestampPrecision:           s.timestampPrecision,
-	}
-	preBuildData := data
-	preBuildData.IgnoreLogonReset = true
-	output, err := s.store.BuildMessage(&preBuildData)
-	for _, errElem := range output.GetErrorsForLog() {
-		s.logError(errElem)
-	}
-	switch {
-	case err != nil:
-		return
-	case isAdminMessageType(msgType):
-		s.application.ToAdmin(output.Msg, s.sessionID)
-	default:
-		if err = s.application.ToApp(output.Msg, s.sessionID); err != nil {
+	if isAdminMessageType(msgType) {
+		s.application.ToAdmin(msg, s.sessionID)
+	} else {
+		if err = s.application.ToApp(msg, s.sessionID); err != nil {
 			return
 		}
 	}
 
+	var resetSeqNumFlag FIXBoolean
+	if bytes.Equal(msgType, msgTypeLogon) && msg.Body.Has(tagResetSeqNumFlag) {
+		if err = msg.Body.GetField(tagResetSeqNumFlag, &resetSeqNumFlag); err != nil {
+			return
+		}
+	}
+
+	data := BuildMessageInput{
+		Msg:                          msg,
+		InReplyTo:                    inReplyTo,
+		EnableLastMsgSeqNumProcessed: s.EnableLastMsgSeqNumProcessed,
+		IsResetSeqNum:                resetSeqNumFlag.Bool(),
+	}
+	var output *BuildMessageOutput
 	if !s.DisableMessagePersist {
 		output, err = s.store.SaveMessageWithTx(&data)
 	} else {
@@ -301,9 +311,7 @@ func (s *session) prepMessageForSend(msg *Message, inReplyTo *Message) (msgBytes
 		err = s.store.IncrNextSenderMsgSeqNum()
 	}
 
-	if output.IsSentReset() { // check for error
-		s.sentReset = true
-	}
+	s.sentReset = output.SentReset
 	if err != nil {
 		return
 	}

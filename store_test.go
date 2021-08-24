@@ -226,16 +226,15 @@ func (suite *MessageStoreTestSuite) TestMessageTxStore_SaveMessageWithTx() {
 		message.Body.SetString(923, "testID")
 		message.Body.SetInt(924, 1)
 		message.Body.SetString(553, "test")
+		sessionID := SessionID{}
+		fillDefaultHeader(message, nil, sessionID, -1, Seconds)
 		return message
 	}
 
-	sessionID := SessionID{}
 	reqMsg1 := createMsgFn()
 	reqMsg2 := createMsgFn()
 	reqMsg3 := createMsgFn()
-	data := BuildMessageInput{
-		SessionID: sessionID,
-	}
+	data := BuildMessageInput{}
 	arr := []*Message{reqMsg1.ToMessage(), reqMsg2.ToMessage(), reqMsg3.ToMessage()}
 	for i, msg := range arr {
 		tmpData := data
@@ -254,14 +253,15 @@ func (suite *MessageStoreTestSuite) TestMessageTxStore_SaveMessageWithTx_ResetLo
 		message.Header.SetString(35, "A") // Logon
 		message.Body.SetInt(98, 0)
 		message.Body.SetInt(108, 30)
+		sessionID := SessionID{}
+		fillDefaultHeader(message, nil, sessionID, -1, Seconds)
 		return message
 	}
 
-	sessionID := SessionID{}
 	msg := createMsgFn()
 	data := BuildMessageInput{
-		Msg:       msg,
-		SessionID: sessionID,
+		Msg:           msg,
+		IsResetSeqNum: true,
 	}
 	msg.Body.SetBool(141, true) // reset
 

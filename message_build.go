@@ -1,7 +1,6 @@
 package quickfix
 
 import (
-	"bytes"
 	"errors"
 	"time"
 )
@@ -10,19 +9,16 @@ import (
 type BuildMessageInput struct {
 	Msg                          *Message
 	InReplyTo                    *Message
-	SessionID                    SessionID
 	EnableLastMsgSeqNumProcessed bool
-	TimestampPrecision           TimestampPrecision
-	IgnoreLogonReset             bool
+	IsResetSeqNum                bool
 }
 
 // BuildMessageOutput stores build message output data
 type BuildMessageOutput struct {
-	MsgBytes     []byte
-	Msg          *Message
-	SentReset    bool
-	SeqNum       int
-	ErrorsForLog []error
+	MsgBytes  []byte
+	Msg       *Message
+	SeqNum    int
+	SentReset bool
 }
 
 type MsgSeqNumCursor interface {
@@ -46,70 +42,34 @@ func (m *messageBuilder) BuildMessage(bd *BuildMessageInput) (output *BuildMessa
 		return
 	}
 	msg := bd.Msg
-	outputData := BuildMessageOutput{}
-	tmpErr := fillDefaultHeader(m.store, msg, bd.InReplyTo, bd.SessionID, bd.EnableLastMsgSeqNumProcessed, bd.TimestampPrecision)
-	outputData.AddErrorForLog(tmpErr)
-	outputData.SeqNum = m.store.NextSenderMsgSeqNum()
-	msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.SeqNum))
-	outputData.Msg = msg
-	output = &outputData
 
-	msgType, err := msg.Header.GetBytes(tagMsgType)
-	if err != nil {
-		return
+	if bd.EnableLastMsgSeqNumProcessed {
+		if bd.InReplyTo != nil {
+			if lastSeqNum, err := bd.InReplyTo.Header.GetInt(tagMsgSeqNum); err == nil {
+				msg.Header.SetInt(tagLastMsgSeqNumProcessed, lastSeqNum)
+			}
+		} else {
+			msg.Header.SetInt(tagLastMsgSeqNumProcessed, m.store.NextTargetMsgSeqNum()-1)
+		}
 	}
 
-	if isAdminMessageType(msgType) {
-		if bytes.Equal(msgType, msgTypeLogon) {
-			var resetSeqNumFlag FIXBoolean
-			if msg.Body.Has(tagResetSeqNumFlag) {
-				if err = msg.Body.GetField(tagResetSeqNumFlag, &resetSeqNumFlag); err != nil {
-					return
-				}
-			}
+	outputData := BuildMessageOutput{}
+	outputData.SeqNum = m.store.NextSenderMsgSeqNum()
+	msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.SeqNum))
 
-			switch {
-			case resetSeqNumFlag.Bool() && bd.IgnoreLogonReset:
-				outputData.SentReset = true
-			case resetSeqNumFlag.Bool():
-				if err = m.store.Reset(); err != nil {
-					return
-				}
-				outputData.SentReset = true
-				outputData.SeqNum = m.store.NextSenderMsgSeqNum()
-				msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.SeqNum))
-			}
+	if bd.IsResetSeqNum { // for Logon message's ResetSeqNumFlag
+		if err = m.store.Reset(); err != nil {
+			return
 		}
+		outputData.SentReset = true
+		outputData.SeqNum = m.store.NextSenderMsgSeqNum()
+		msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.SeqNum))
 	}
 
 	outputData.MsgBytes = msg.build()
 	outputData.Msg = msg
-
+	output = &outputData
 	return
-}
-
-func (b *BuildMessageOutput) AddErrorForLog(err error) {
-	if err == nil {
-		return
-	}
-	if len(b.ErrorsForLog) == 0 {
-		b.ErrorsForLog = make([]error, 0, 1)
-	}
-	b.ErrorsForLog = append(b.ErrorsForLog, err)
-}
-
-func (b *BuildMessageOutput) GetErrorsForLog() []error {
-	if b == nil {
-		return nil
-	}
-	return b.ErrorsForLog
-}
-
-func (b *BuildMessageOutput) IsSentReset() bool {
-	if b == nil {
-		return false
-	}
-	return b.SentReset
 }
 
 func insertSendingTime(msg *Message, sessionID SessionID, timestampPrecision TimestampPrecision) {
@@ -122,7 +82,7 @@ func insertSendingTime(msg *Message, sessionID SessionID, timestampPrecision Tim
 	}
 }
 
-func fillDefaultHeader(store MsgSeqNumCursor, msg *Message, inReplyTo *Message, sessionID SessionID, enableLastMsgSeqNumProcessed bool, timestampPrecision TimestampPrecision) error {
+func fillDefaultHeader(msg *Message, inReplyTo *Message, sessionID SessionID, lastSeqNum int, timestampPrecision TimestampPrecision) {
 	msg.Header.SetString(tagBeginString, sessionID.BeginString)
 	msg.Header.SetString(tagSenderCompID, sessionID.SenderCompID)
 	optionallySetID(msg, tagSenderSubID, sessionID.SenderSubID)
@@ -134,16 +94,7 @@ func fillDefaultHeader(store MsgSeqNumCursor, msg *Message, inReplyTo *Message, 
 
 	insertSendingTime(msg, sessionID, timestampPrecision)
 
-	if enableLastMsgSeqNumProcessed {
-		if inReplyTo != nil {
-			lastSeqNum, err := inReplyTo.Header.GetInt(tagMsgSeqNum)
-			if err != nil {
-				return err
-			}
-			msg.Header.SetInt(tagLastMsgSeqNumProcessed, lastSeqNum)
-		} else {
-			msg.Header.SetInt(tagLastMsgSeqNumProcessed, store.NextTargetMsgSeqNum()-1)
-		}
+	if lastSeqNum >= 0 {
+		msg.Header.SetInt(tagLastMsgSeqNumProcessed, lastSeqNum)
 	}
-	return nil
 }

@@ -30,7 +30,7 @@ type session struct {
 	sessionEvent chan internal.Event
 	messageEvent chan bool
 	application  Application
-	validator
+	Validator
 	stateMachine
 	stateTimer *internal.EventTimer
 	peerTimer  *internal.EventTimer
@@ -427,9 +427,11 @@ func (s *session) handleLogon(msg *Message) error {
 	}
 
 	if !s.InitiateLogon {
-		var heartBtInt FIXInt
-		if err := msg.Body.GetField(tagHeartBtInt, &heartBtInt); err == nil {
-			s.HeartBtInt = time.Duration(heartBtInt) * time.Second
+		if !s.HeartBtIntOverride {
+			var heartBtInt FIXInt
+			if err := msg.Body.GetField(tagHeartBtInt, &heartBtInt); err == nil {
+				s.HeartBtInt = time.Duration(heartBtInt) * time.Second
+			}
 		}
 
 		s.log.OnEvent("Responding to logon request")
@@ -501,8 +503,8 @@ func (s *session) verifySelect(msg *Message, checkTooHigh bool, checkTooLow bool
 		}
 	}
 
-	if s.validator != nil {
-		if reject := s.validator.Validate(msg); reject != nil {
+	if s.Validator != nil {
+		if reject := s.Validator.Validate(msg); reject != nil {
 			return reject
 		}
 	}

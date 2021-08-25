@@ -4,12 +4,18 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"github.com/cryptogarageinc/quickfix-go/internal"
 )
 
 var sessionsLock sync.RWMutex
 var sessions = make(map[SessionID]*session)
-var errDuplicateSessionID = errors.New("Duplicate SessionID")
-var errUnknownSession = errors.New("Unknown session")
+
+// ErrDuplicateSessionID defines duplicate SessionID
+var ErrDuplicateSessionID = errors.New("duplicate SessionID")
+
+// ErrUnknownSession defines unknown session
+var ErrUnknownSession = errors.New("unknown session")
 
 //Messagable is a Message or something that can be converted to a Message
 type Messagable interface {
@@ -45,7 +51,7 @@ func SendToTarget(m Messagable, sessionID SessionID) error {
 	msg := m.ToMessage()
 	session, ok := lookupSession(sessionID)
 	if !ok {
-		return errUnknownSession
+		return ErrUnknownSession
 	}
 
 	return session.queueForSend(msg)
@@ -58,7 +64,7 @@ func UnregisterSession(sessionID SessionID) (err error) {
 	if ok {
 		delete(sessions, sessionID)
 	} else {
-		err = errUnknownSession
+		err = ErrUnknownSession
 	}
 	sessionsLock.Unlock()
 
@@ -72,7 +78,7 @@ func registerSession(s *session) (err error) {
 	sessionsLock.Lock()
 	_, ok := sessions[s.sessionID]
 	if ok {
-		err = errDuplicateSessionID
+		err = ErrDuplicateSessionID
 	} else {
 		sessions[s.sessionID] = s
 	}
@@ -102,9 +108,18 @@ const (
 // ErrDoNotLoggedOnSession defines no loggedOn session error.
 var ErrDoNotLoggedOnSession = errors.New(doNotLoggedOnSessionMessage)
 
+// ErrExistSession defines already exist session error.
+var ErrExistSession = errors.New("exist session")
+
+type messageStoreAccessor struct {
+	storeFactory MessageStoreFactory
+	settings     *SessionSettings
+}
+
 var stoppedSessionsLock sync.RWMutex
 var stoppedSessions = make(map[SessionID]*session)
 var isClosedStopeedSessions = false
+var storeMessageObject *messageStoreAccessor
 
 // ErrorBySessionID This struct has error map by sessionID.
 type ErrorBySessionID struct {
@@ -240,7 +255,18 @@ func SendToSession(m Messagable, sessionID SessionID) (err error) {
 	if ok {
 		return session.queueForSend(msg)
 	}
-	return errUnknownSession
+	return ErrUnknownSession
+}
+
+// StoreMessageToSession stores a message on session.
+// If returns ErrExistSession, please call SendToSession because already connected session.
+func StoreMessageToSession(m Messagable, sessionID SessionID) (err error) {
+	if storeMessageObject == nil {
+		err = errors.New("unsupported store message")
+		return
+	}
+	err = storeMessageObject.storeMessage(m, sessionID)
+	return
 }
 
 func registerStoppedSession(s *session) {
@@ -323,4 +349,37 @@ func CleanupInvalidStoppedSession() {
 			delete(stoppedSessions, id)
 		}
 	}
+}
+
+func (f *messageStoreAccessor) storeMessage(m Messagable, sessionID SessionID) (err error) {
+	store, err := f.storeFactory.Create(sessionID)
+	if err != nil {
+		return err
+	}
+	defer store.Close()
+
+	sessionSettings := internal.SessionSettings{}
+	var timestampPrecision TimestampPrecision
+	if err = setMessageSettings(f.settings, &sessionSettings, &timestampPrecision); err != nil {
+		return err
+	}
+	if sessionSettings.DisableMessagePersist {
+		return errors.New("PersistMessages is N. store not supported")
+	}
+
+	msg := m.ToMessage()
+	msgType, err := msg.Header.GetBytes(tagMsgType)
+	if err != nil {
+		return err
+	} else if isAdminMessageType(msgType) {
+		return errors.New("admin message not supported")
+	}
+	fillDefaultHeader(msg, nil, sessionID, timestampPrecision)
+
+	data := BuildMessageInput{
+		Msg:                          msg,
+		EnableLastMsgSeqNumProcessed: sessionSettings.EnableLastMsgSeqNumProcessed,
+	}
+	_, err = store.SaveMessageWithTx(&data)
+	return err
 }

@@ -149,12 +149,6 @@ func (f sessionFactory) newSession(
 		}
 	}
 
-	if settings.HasSetting(config.EnableLastMsgSeqNumProcessed) {
-		if s.EnableLastMsgSeqNumProcessed, err = settings.BoolSetting(config.EnableLastMsgSeqNumProcessed); err != nil {
-			return
-		}
-	}
-
 	if settings.HasSetting(config.CheckLatency) {
 		var doCheckLatency bool
 		if doCheckLatency, err = settings.BoolSetting(config.CheckLatency); err != nil {
@@ -251,35 +245,8 @@ func (f sessionFactory) newSession(
 		}
 	}
 
-	if settings.HasSetting(config.TimeStampPrecision) {
-		var precisionStr string
-		if precisionStr, err = settings.Setting(config.TimeStampPrecision); err != nil {
-			return
-		}
-
-		switch precisionStr {
-		case "SECONDS":
-			s.timestampPrecision = Seconds
-		case "MILLIS":
-			s.timestampPrecision = Millis
-		case "MICROS":
-			s.timestampPrecision = Micros
-		case "NANOS":
-			s.timestampPrecision = Nanos
-
-		default:
-			err = IncorrectFormatForSetting{Setting: config.TimeStampPrecision, Value: precisionStr}
-			return
-		}
-	}
-
-	if settings.HasSetting(config.PersistMessages) {
-		var persistMessages bool
-		if persistMessages, err = settings.BoolSetting(config.PersistMessages); err != nil {
-			return
-		}
-
-		s.DisableMessagePersist = !persistMessages
+	if err = setMessageSettings(settings, &s.SessionSettings, &s.timestampPrecision); err != nil {
+		return
 	}
 
 	if f.BuildInitiators {
@@ -301,6 +268,45 @@ func (f sessionFactory) newSession(
 	s.admin = make(chan interface{})
 	s.notifyLogonEvent = make(chan struct{}, 1)
 	s.application = application
+	return
+}
+
+func setMessageSettings(settings *SessionSettings, sessionSetting *internal.SessionSettings, timestampPrecision *TimestampPrecision) (err error) {
+	if settings.HasSetting(config.EnableLastMsgSeqNumProcessed) {
+		if sessionSetting.EnableLastMsgSeqNumProcessed, err = settings.BoolSetting(config.EnableLastMsgSeqNumProcessed); err != nil {
+			return
+		}
+	}
+
+	if settings.HasSetting(config.PersistMessages) {
+		var persistMessages bool
+		if persistMessages, err = settings.BoolSetting(config.PersistMessages); err != nil {
+			return
+		}
+
+		sessionSetting.DisableMessagePersist = !persistMessages
+	}
+	if settings.HasSetting(config.TimeStampPrecision) {
+		var precisionStr string
+		if precisionStr, err = settings.Setting(config.TimeStampPrecision); err != nil {
+			return
+		}
+
+		switch precisionStr {
+		case "SECONDS":
+			*timestampPrecision = Seconds
+		case "MILLIS":
+			*timestampPrecision = Millis
+		case "MICROS":
+			*timestampPrecision = Micros
+		case "NANOS":
+			*timestampPrecision = Nanos
+
+		default:
+			err = IncorrectFormatForSetting{Setting: config.TimeStampPrecision, Value: precisionStr}
+			return
+		}
+	}
 	return
 }
 

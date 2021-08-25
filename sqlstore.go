@@ -2,6 +2,7 @@ package quickfix
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -22,6 +23,8 @@ type sqlStore struct {
 	sqlConnMaxIdle     int
 	sqlConnMaxOpen     int
 	db                 *gorm.DB
+
+	*messageBuilder
 }
 
 type dbSettings struct {
@@ -103,6 +106,7 @@ func newSQLStore(sessionID SessionID, driver string, dataSourceName string, dbs 
 		sqlConnMaxIdle:     dbs.connMaxIdle,
 		sqlConnMaxOpen:     dbs.connMaxOpen,
 	}
+	store.messageBuilder = newMessageBuilder(store)
 	store.cache.Reset()
 
 	if store.db, err = gorm.Open(store.sqlDriver, store.sqlDataSourceName); err != nil {
@@ -127,8 +131,12 @@ func (store *sqlStore) Reset() (err error) {
 	if store.db == nil {
 		return ErrAccessToClosedStore
 	}
+	return store.reset(store.db)
+}
+
+func (store *sqlStore) reset(tx *gorm.DB) (err error) {
 	s := store.sessionID
-	if err = store.db.Exec(`DELETE FROM messages
+	if err = tx.Exec(`DELETE FROM messages
 		WHERE beginstring = ? AND session_qualifier = ?
 		AND sendercompid = ? AND sendersubid = ? AND senderlocid = ?
 		AND targetcompid = ? AND targetsubid = ? AND targetlocid = ?`,
@@ -142,7 +150,7 @@ func (store *sqlStore) Reset() (err error) {
 		return err
 	}
 
-	return store.db.Exec(`UPDATE sessions
+	return tx.Exec(`UPDATE sessions
 		SET creation_time = ?, incoming_seqnum = ?, outgoing_seqnum = ?
 		WHERE beginstring = ? AND session_qualifier = ?
 		AND sendercompid= ? AND sendersubid = ? AND senderlocid = ?
@@ -321,6 +329,84 @@ func (store *sqlStore) GetMessages(beginSeqNum, endSeqNum int) ([][]byte, error)
 	}
 
 	return msgs, nil
+}
+
+func (store *sqlStore) SaveMessageWithTx(messageBuildData *BuildMessageInput) (output *BuildMessageOutput, err error) {
+	if store.db == nil {
+		return nil, ErrAccessToClosedStore
+	}
+	s := store.sessionID
+
+	err = store.db.Transaction(func(tx *gorm.DB) error {
+		var outgoingSeqNum int
+		row := tx.Raw(`SELECT outgoing_seqnum FROM sessions
+			WHERE beginstring = ? AND session_qualifier = ?
+			AND sendercompid = ? AND sendersubid = ? AND senderlocid = ?
+			AND targetcompid = ? AND targetsubid = ? AND targetlocid = ?`,
+			s.BeginString, s.Qualifier,
+			s.SenderCompID, s.SenderSubID, s.SenderLocationID,
+			s.TargetCompID, s.TargetSubID, s.TargetLocationID).Row()
+
+		if err := row.Scan(&outgoingSeqNum); err != nil {
+			return err
+		}
+		if outgoingSeqNum != store.cache.NextSenderMsgSeqNum() {
+			store.cache.SetNextSenderMsgSeqNum(outgoingSeqNum) // refresh
+		}
+
+		input := *messageBuildData
+		input.IsResetSeqNum = false // For execute store.reset(tx) after BuildMessage is executed.
+		outputData, err := store.BuildMessage(&input)
+		if err != nil {
+			return err
+		}
+		if messageBuildData.IsResetSeqNum {
+			if err = store.reset(tx); err != nil {
+				return err
+			}
+			outputData.SentReset = true
+			outputData.SeqNum = store.NextSenderMsgSeqNum()
+			outputData.Msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.SeqNum))
+			outputData.MsgBytes = outputData.Msg.build()
+		}
+
+		output = outputData // Response should also be returned in case of an error.
+		seqNum := store.cache.NextSenderMsgSeqNum()
+		if seqNum != output.SeqNum {
+			return errors.New("internal error: unmatch seqnum")
+		}
+		nextSeqNum := seqNum + 1
+
+		if err := tx.Exec(`INSERT INTO messages (
+			msgseqnum, message,
+			beginstring, session_qualifier,
+			sendercompid, sendersubid, senderlocid,
+			targetcompid, targetsubid, targetlocid)
+			VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			seqNum, string(outputData.MsgBytes),
+			s.BeginString, s.Qualifier,
+			s.SenderCompID, s.SenderSubID, s.SenderLocationID,
+			s.TargetCompID, s.TargetSubID, s.TargetLocationID).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Exec(`UPDATE sessions SET outgoing_seqnum = ?
+			WHERE beginstring = ? AND session_qualifier = ?
+			AND sendercompid = ? AND sendersubid = ? AND senderlocid = ?
+			AND targetcompid = ? AND targetsubid = ? AND targetlocid = ?`,
+			nextSeqNum, s.BeginString, s.Qualifier,
+			s.SenderCompID, s.SenderSubID, s.SenderLocationID,
+			s.TargetCompID, s.TargetSubID, s.TargetLocationID).Error; err != nil {
+			return err
+		}
+		return store.cache.SetNextSenderMsgSeqNum(nextSeqNum)
+	})
+	if err != nil {
+		_ = store.Refresh()
+		// Response should also be returned in case of an error.
+		return
+	}
+	return output, nil
 }
 
 // Close closes the store's database connection

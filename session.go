@@ -98,13 +98,7 @@ func (s *session) waitForInSessionTime() {
 }
 
 func (s *session) insertSendingTime(msg *Message) {
-	sendingTime := time.Now().UTC()
-
-	if s.sessionID.BeginString >= BeginStringFIX42 {
-		msg.Header.SetField(tagSendingTime, FIXUTCTimestamp{Time: sendingTime, Precision: s.timestampPrecision})
-	} else {
-		msg.Header.SetField(tagSendingTime, FIXUTCTimestamp{Time: sendingTime, Precision: Seconds})
-	}
+	insertSendingTime(msg, s.sessionID, s.timestampPrecision)
 }
 
 func optionallySetID(msg *Message, field Tag, value string) {
@@ -114,17 +108,7 @@ func optionallySetID(msg *Message, field Tag, value string) {
 }
 
 func (s *session) fillDefaultHeader(msg *Message, inReplyTo *Message) {
-	msg.Header.SetString(tagBeginString, s.sessionID.BeginString)
-	msg.Header.SetString(tagSenderCompID, s.sessionID.SenderCompID)
-	optionallySetID(msg, tagSenderSubID, s.sessionID.SenderSubID)
-	optionallySetID(msg, tagSenderLocationID, s.sessionID.SenderLocationID)
-
-	msg.Header.SetString(tagTargetCompID, s.sessionID.TargetCompID)
-	optionallySetID(msg, tagTargetSubID, s.sessionID.TargetSubID)
-	optionallySetID(msg, tagTargetLocationID, s.sessionID.TargetLocationID)
-
-	s.insertSendingTime(msg)
-
+	fillDefaultHeader(msg, inReplyTo, s.sessionID, s.timestampPrecision)
 	if s.EnableLastMsgSeqNumProcessed {
 		if inReplyTo != nil {
 			if lastSeqNum, err := inReplyTo.Header.GetInt(tagMsgSeqNum); err != nil {
@@ -297,45 +281,39 @@ func (s *session) prepMessageForSend(msg *Message, inReplyTo *Message) (msgBytes
 
 	if isAdminMessageType(msgType) {
 		s.application.ToAdmin(msg, s.sessionID)
-
-		if bytes.Equal(msgType, msgTypeLogon) {
-			var resetSeqNumFlag FIXBoolean
-			if msg.Body.Has(tagResetSeqNumFlag) {
-				if err = msg.Body.GetField(tagResetSeqNumFlag, &resetSeqNumFlag); err != nil {
-					return
-				}
-			}
-
-			if resetSeqNumFlag.Bool() {
-				if err = s.store.Reset(); err != nil {
-					return
-				}
-
-				s.sentReset = true
-				seqNum = s.store.NextSenderMsgSeqNum()
-				msg.Header.SetField(tagMsgSeqNum, FIXInt(seqNum))
-			}
-		}
 	} else {
 		if err = s.application.ToApp(msg, s.sessionID); err != nil {
 			return
 		}
 	}
 
-	msgBytes = msg.build()
-	err = s.persist(seqNum, msgBytes)
-
-	return
-}
-
-func (s *session) persist(seqNum int, msgBytes []byte) error {
-	if !s.DisableMessagePersist {
-		if err := s.store.SaveMessage(seqNum, msgBytes); err != nil {
-			return err
+	var resetSeqNumFlag FIXBoolean
+	if bytes.Equal(msgType, msgTypeLogon) && msg.Body.Has(tagResetSeqNumFlag) {
+		if err = msg.Body.GetField(tagResetSeqNumFlag, &resetSeqNumFlag); err != nil {
+			return
 		}
 	}
 
-	return s.store.IncrNextSenderMsgSeqNum()
+	data := BuildMessageInput{
+		Msg:                          msg,
+		InReplyTo:                    inReplyTo,
+		EnableLastMsgSeqNumProcessed: s.EnableLastMsgSeqNumProcessed,
+		IsResetSeqNum:                resetSeqNumFlag.Bool(),
+	}
+	var output *BuildMessageOutput
+	if !s.DisableMessagePersist {
+		output, err = s.store.SaveMessageWithTx(&data)
+	} else {
+		output, err = s.store.BuildMessage(&data)
+		if err != nil {
+			return
+		}
+		err = s.store.IncrNextSenderMsgSeqNum()
+	}
+
+	s.sentReset = output.SentReset
+	msgBytes = output.MsgBytes
+	return
 }
 
 func (s *session) sendQueued() {

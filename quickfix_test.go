@@ -195,6 +195,7 @@ type SessionSuiteRig struct {
 func (s *SessionSuiteRig) Init() {
 	s.MockApp = MockApp{}
 	s.MockStore = MockStore{}
+	s.MockStore.messageBuilder = newMessageBuilder(&s.MockStore)
 	s.MessageFactory = MessageFactory{}
 	s.Receiver = newMockSessionReceiver()
 	s.session = &session{

@@ -191,7 +191,7 @@ func NewAcceptor(app Application, storeFactory MessageStoreFactory, settings *Se
 		sessID.Qualifier = ""
 
 		if _, dup := a.sessions[sessID]; dup {
-			return a, errDuplicateSessionID
+			return a, ErrDuplicateSessionID
 		}
 
 		if a.sessions[sessID], err = a.createSession(sessionID, storeFactory, sessionSettings, logFactory, app); err != nil {
@@ -200,6 +200,10 @@ func NewAcceptor(app Application, storeFactory MessageStoreFactory, settings *Se
 		a.sessions[sessID].linkedAcceptor = a
 	}
 
+	storeMessageObject = &messageStoreAccessor{
+		storeFactory: storeFactory,
+		settings:     settings.globalSettings.clone(),
+	}
 	return
 }
 

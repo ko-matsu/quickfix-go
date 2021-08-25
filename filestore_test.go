@@ -2,7 +2,6 @@ package quickfix
 
 import (
 	"fmt"
-	"os"
 	"path"
 	"strings"
 	"testing"
@@ -15,12 +14,11 @@ import (
 // FileStoreTestSuite runs all tests in the MessageStoreTestSuite against the FileStore implementation
 type FileStoreTestSuite struct {
 	MessageStoreTestSuite
-	fileStoreRootPath string
 }
 
 func (suite *FileStoreTestSuite) SetupTest() {
-	suite.fileStoreRootPath = path.Join(os.TempDir(), fmt.Sprintf("FileStoreTestSuite-%d", os.Getpid()))
-	fileStorePath := path.Join(suite.fileStoreRootPath, fmt.Sprintf("%d", time.Now().UnixNano()))
+	testName := suite.getTestName(suite.T())
+	fileStorePath := path.Join(suite.T().TempDir(), fmt.Sprintf("FileStoreTestSuite-%s-%d", testName, time.Now().UnixNano()))
 	sessionID := SessionID{BeginString: "FIX.4.4", SenderCompID: "SENDER", TargetCompID: "TARGET"}
 
 	// create settings
@@ -41,7 +39,6 @@ TargetCompID=%s`, fileStorePath, sessionID.BeginString, sessionID.SenderCompID, 
 
 func (suite *FileStoreTestSuite) TearDownTest() {
 	suite.msgStore.Close()
-	os.RemoveAll(suite.fileStoreRootPath)
 }
 
 func TestFileStoreTestSuite(t *testing.T) {

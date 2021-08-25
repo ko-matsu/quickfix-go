@@ -116,7 +116,7 @@ func (s *session) fillDefaultHeader(msg *Message, inReplyTo *Message) {
 				s.logError(err)
 			}
 		} else {
-			msg.Header.SetInt(tagLastMsgSeqNumProcessed, s.store.NextTargetMsgSeqNum()-1)
+			lastSeqNum = s.store.NextTargetMsgSeqNum() - 1
 		}
 	}
 	fillDefaultHeader(msg, inReplyTo, s.sessionID, lastSeqNum, s.timestampPrecision)

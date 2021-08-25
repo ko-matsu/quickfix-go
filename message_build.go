@@ -21,6 +21,7 @@ type BuildMessageOutput struct {
 	SentReset bool
 }
 
+// MsgSeqNumCursor interface provides methods for referencing/resetting the SeqNum position
 type MsgSeqNumCursor interface {
 	NextSenderMsgSeqNum() int
 	NextTargetMsgSeqNum() int

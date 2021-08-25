@@ -29,7 +29,7 @@ type MsgSeqNumCursor interface {
 }
 
 type messageBuilder struct {
-	store MsgSeqNumCursor
+	cursor MsgSeqNumCursor
 }
 
 func newMessageBuilder(store MsgSeqNumCursor) *messageBuilder {
@@ -37,8 +37,8 @@ func newMessageBuilder(store MsgSeqNumCursor) *messageBuilder {
 }
 
 func (m *messageBuilder) BuildMessage(bd *BuildMessageInput) (output *BuildMessageOutput, err error) {
-	if m == nil || m.store == nil {
-		err = errors.New("failed to initialize. please to set store")
+	if m == nil || m.cursor == nil {
+		err = errors.New("failed to initialize. please to set cursor")
 		return
 	}
 	msg := bd.Msg
@@ -49,20 +49,20 @@ func (m *messageBuilder) BuildMessage(bd *BuildMessageInput) (output *BuildMessa
 				msg.Header.SetInt(tagLastMsgSeqNumProcessed, lastSeqNum)
 			}
 		} else {
-			msg.Header.SetInt(tagLastMsgSeqNumProcessed, m.store.NextTargetMsgSeqNum()-1)
+			msg.Header.SetInt(tagLastMsgSeqNumProcessed, m.cursor.NextTargetMsgSeqNum()-1)
 		}
 	}
 
 	outputData := BuildMessageOutput{}
-	outputData.SeqNum = m.store.NextSenderMsgSeqNum()
+	outputData.SeqNum = m.cursor.NextSenderMsgSeqNum()
 	msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.SeqNum))
 
 	if bd.IsResetSeqNum { // for Logon message's ResetSeqNumFlag
-		if err = m.store.Reset(); err != nil {
+		if err = m.cursor.Reset(); err != nil {
 			return
 		}
 		outputData.SentReset = true
-		outputData.SeqNum = m.store.NextSenderMsgSeqNum()
+		outputData.SeqNum = m.cursor.NextSenderMsgSeqNum()
 		msg.Header.SetField(tagMsgSeqNum, FIXInt(outputData.SeqNum))
 	}
 

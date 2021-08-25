@@ -108,6 +108,7 @@ func optionallySetID(msg *Message, field Tag, value string) {
 }
 
 func (s *session) fillDefaultHeader(msg *Message, inReplyTo *Message) {
+	fillDefaultHeader(msg, inReplyTo, s.sessionID, s.timestampPrecision)
 	if s.EnableLastMsgSeqNumProcessed {
 		if inReplyTo != nil {
 			if lastSeqNum, err := inReplyTo.Header.GetInt(tagMsgSeqNum); err != nil {
@@ -119,7 +120,6 @@ func (s *session) fillDefaultHeader(msg *Message, inReplyTo *Message) {
 			msg.Header.SetInt(tagLastMsgSeqNumProcessed, s.store.NextTargetMsgSeqNum()-1)
 		}
 	}
-	fillDefaultHeader(msg, inReplyTo, s.sessionID, s.timestampPrecision)
 }
 
 func (s *session) shouldSendReset() bool {
@@ -312,9 +312,6 @@ func (s *session) prepMessageForSend(msg *Message, inReplyTo *Message) (msgBytes
 	}
 
 	s.sentReset = output.SentReset
-	if err != nil {
-		return
-	}
 	msgBytes = output.MsgBytes
 	return
 }

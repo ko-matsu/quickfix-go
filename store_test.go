@@ -227,7 +227,7 @@ func (suite *MessageStoreTestSuite) TestMessageTxStore_SaveMessageWithTx() {
 		message.Body.SetInt(924, 1)
 		message.Body.SetString(553, "test")
 		sessionID := SessionID{}
-		fillDefaultHeader(message, nil, sessionID, -1, Seconds)
+		fillDefaultHeader(message, nil, sessionID, Seconds)
 		return message
 	}
 
@@ -254,7 +254,7 @@ func (suite *MessageStoreTestSuite) TestMessageTxStore_SaveMessageWithTx_ResetLo
 		message.Body.SetInt(98, 0)
 		message.Body.SetInt(108, 30)
 		sessionID := SessionID{}
-		fillDefaultHeader(message, nil, sessionID, -1, Seconds)
+		fillDefaultHeader(message, nil, sessionID, Seconds)
 		return message
 	}
 

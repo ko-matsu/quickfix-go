@@ -108,18 +108,18 @@ func optionallySetID(msg *Message, field Tag, value string) {
 }
 
 func (s *session) fillDefaultHeader(msg *Message, inReplyTo *Message) {
-	var err error
-	lastSeqNum := -1
 	if s.EnableLastMsgSeqNumProcessed {
 		if inReplyTo != nil {
-			if lastSeqNum, err = inReplyTo.Header.GetInt(tagMsgSeqNum); err != nil {
+			if lastSeqNum, err := inReplyTo.Header.GetInt(tagMsgSeqNum); err != nil {
 				s.logError(err)
+			} else {
+				msg.Header.SetInt(tagLastMsgSeqNumProcessed, lastSeqNum)
 			}
 		} else {
-			lastSeqNum = s.store.NextTargetMsgSeqNum() - 1
+			msg.Header.SetInt(tagLastMsgSeqNumProcessed, s.store.NextTargetMsgSeqNum()-1)
 		}
 	}
-	fillDefaultHeader(msg, inReplyTo, s.sessionID, lastSeqNum, s.timestampPrecision)
+	fillDefaultHeader(msg, inReplyTo, s.sessionID, s.timestampPrecision)
 }
 
 func (s *session) shouldSendReset() bool {

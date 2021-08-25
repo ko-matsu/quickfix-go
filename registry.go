@@ -374,7 +374,7 @@ func (f *messageStoreAccessor) storeMessage(m Messagable, sessionID SessionID) (
 	} else if isAdminMessageType(msgType) {
 		return errors.New("admin message not supported")
 	}
-	fillDefaultHeader(msg, nil, sessionID, -1, timestampPrecision)
+	fillDefaultHeader(msg, nil, sessionID, timestampPrecision)
 
 	data := BuildMessageInput{
 		Msg:                          msg,

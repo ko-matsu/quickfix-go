@@ -82,7 +82,7 @@ func insertSendingTime(msg *Message, sessionID SessionID, timestampPrecision Tim
 	}
 }
 
-func fillDefaultHeader(msg *Message, inReplyTo *Message, sessionID SessionID, lastSeqNum int, timestampPrecision TimestampPrecision) {
+func fillDefaultHeader(msg *Message, inReplyTo *Message, sessionID SessionID, timestampPrecision TimestampPrecision) {
 	msg.Header.SetString(tagBeginString, sessionID.BeginString)
 	msg.Header.SetString(tagSenderCompID, sessionID.SenderCompID)
 	optionallySetID(msg, tagSenderSubID, sessionID.SenderSubID)
@@ -93,8 +93,4 @@ func fillDefaultHeader(msg *Message, inReplyTo *Message, sessionID SessionID, la
 	optionallySetID(msg, tagTargetLocationID, sessionID.TargetLocationID)
 
 	insertSendingTime(msg, sessionID, timestampPrecision)
-
-	if lastSeqNum >= 0 {
-		msg.Header.SetInt(tagLastMsgSeqNumProcessed, lastSeqNum)
-	}
 }

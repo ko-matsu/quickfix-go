@@ -110,7 +110,7 @@ func (f sessionFactory) newSession(
 				return
 			}
 
-			s.validator = &fixtValidator{s.transportDataDictionary, s.appDataDictionary, validatorSettings}
+			s.Validator = NewValidator(validatorSettings, s.appDataDictionary, s.transportDataDictionary)
 		}
 	} else if settings.HasSetting(config.DataDictionary) {
 		var dataDictionaryPath string
@@ -122,7 +122,7 @@ func (f sessionFactory) newSession(
 			return
 		}
 
-		s.validator = &fixValidator{s.appDataDictionary, validatorSettings}
+		s.Validator = NewValidator(validatorSettings, s.appDataDictionary, nil)
 	}
 
 	if settings.HasSetting(config.ResetOnLogon) {
@@ -145,12 +145,6 @@ func (f sessionFactory) newSession(
 
 	if settings.HasSetting(config.ResetOnDisconnect) {
 		if s.ResetOnDisconnect, err = settings.BoolSetting(config.ResetOnDisconnect); err != nil {
-			return
-		}
-	}
-
-	if settings.HasSetting(config.EnableLastMsgSeqNumProcessed) {
-		if s.EnableLastMsgSeqNumProcessed, err = settings.BoolSetting(config.EnableLastMsgSeqNumProcessed); err != nil {
 			return
 		}
 	}
@@ -251,41 +245,16 @@ func (f sessionFactory) newSession(
 		}
 	}
 
-	if settings.HasSetting(config.TimeStampPrecision) {
-		var precisionStr string
-		if precisionStr, err = settings.Setting(config.TimeStampPrecision); err != nil {
-			return
-		}
-
-		switch precisionStr {
-		case "SECONDS":
-			s.timestampPrecision = Seconds
-		case "MILLIS":
-			s.timestampPrecision = Millis
-		case "MICROS":
-			s.timestampPrecision = Micros
-		case "NANOS":
-			s.timestampPrecision = Nanos
-
-		default:
-			err = IncorrectFormatForSetting{Setting: config.TimeStampPrecision, Value: precisionStr}
-			return
-		}
-	}
-
-	if settings.HasSetting(config.PersistMessages) {
-		var persistMessages bool
-		if persistMessages, err = settings.BoolSetting(config.PersistMessages); err != nil {
-			return
-		}
-
-		s.DisableMessagePersist = !persistMessages
+	if err = setMessageSettings(settings, &s.SessionSettings, &s.timestampPrecision); err != nil {
+		return
 	}
 
 	if f.BuildInitiators {
 		if err = f.buildInitiatorSettings(s, settings); err != nil {
 			return
 		}
+	} else if err = f.buildAcceptorSettings(s, settings); err != nil {
+		return
 	}
 
 	if s.log, err = logFactory.CreateSessionLog(s.sessionID); err != nil {
@@ -304,18 +273,58 @@ func (f sessionFactory) newSession(
 	return
 }
 
+func setMessageSettings(settings *SessionSettings, sessionSetting *internal.SessionSettings, timestampPrecision *TimestampPrecision) (err error) {
+	if settings.HasSetting(config.EnableLastMsgSeqNumProcessed) {
+		if sessionSetting.EnableLastMsgSeqNumProcessed, err = settings.BoolSetting(config.EnableLastMsgSeqNumProcessed); err != nil {
+			return
+		}
+	}
+
+	if settings.HasSetting(config.PersistMessages) {
+		var persistMessages bool
+		if persistMessages, err = settings.BoolSetting(config.PersistMessages); err != nil {
+			return
+		}
+
+		sessionSetting.DisableMessagePersist = !persistMessages
+	}
+	if settings.HasSetting(config.TimeStampPrecision) {
+		var precisionStr string
+		if precisionStr, err = settings.Setting(config.TimeStampPrecision); err != nil {
+			return
+		}
+
+		switch precisionStr {
+		case "SECONDS":
+			*timestampPrecision = Seconds
+		case "MILLIS":
+			*timestampPrecision = Millis
+		case "MICROS":
+			*timestampPrecision = Micros
+		case "NANOS":
+			*timestampPrecision = Nanos
+
+		default:
+			err = IncorrectFormatForSetting{Setting: config.TimeStampPrecision, Value: precisionStr}
+			return
+		}
+	}
+	return
+}
+
+func (f sessionFactory) buildAcceptorSettings(session *session, settings *SessionSettings) error {
+	if err := f.buildHeartBtIntSettings(session, settings, false); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (f sessionFactory) buildInitiatorSettings(session *session, settings *SessionSettings) error {
 	session.InitiateLogon = true
 
-	heartBtInt, err := settings.IntSetting(config.HeartBtInt)
-	if err != nil {
+	if err := f.buildHeartBtIntSettings(session, settings, true); err != nil {
 		return err
 	}
-
-	if heartBtInt <= 0 {
-		return errors.New("Heartbeat must be greater than zero")
-	}
-	session.HeartBtInt = time.Duration(heartBtInt) * time.Second
 
 	session.ReconnectInterval = 30 * time.Second
 	if settings.HasSetting(config.ReconnectInterval) {
@@ -394,4 +403,24 @@ func (f sessionFactory) configureSocketConnectAddress(session *session, settings
 		session.SocketConnectAddress = append(session.SocketConnectAddress, net.JoinHostPort(socketConnectHost, socketConnectPort))
 		i++
 	}
+}
+
+func (f sessionFactory) buildHeartBtIntSettings(session *session, settings *SessionSettings, mustProvide bool) (err error) {
+	if settings.HasSetting(config.HeartBtIntOverride) {
+		if session.HeartBtIntOverride, err = settings.BoolSetting(config.HeartBtIntOverride); err != nil {
+			return
+		}
+	}
+
+	if session.HeartBtIntOverride || mustProvide {
+		var heartBtInt int
+		if heartBtInt, err = settings.IntSetting(config.HeartBtInt); err != nil {
+			return
+		} else if heartBtInt <= 0 {
+			err = errors.New("Heartbeat must be greater than zero")
+			return
+		}
+		session.HeartBtInt = time.Duration(heartBtInt) * time.Second
+	}
+	return
 }

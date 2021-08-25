@@ -26,6 +26,9 @@ type MessageStore interface {
 	Reset() error
 
 	Close() error
+
+	SaveMessageWithTx(messageBuildData *BuildMessageInput) (output *BuildMessageOutput, err error)
+	BuildMessage(messageBuildData *BuildMessageInput) (output *BuildMessageOutput, err error)
 }
 
 //The MessageStoreFactory interface is used by session to create a session specific message store
@@ -39,6 +42,7 @@ type memoryStore struct {
 	messageMap                       map[int][]byte
 
 	isClosed bool
+	*messageBuilder
 }
 
 func (store *memoryStore) NextSenderMsgSeqNum() int {
@@ -126,10 +130,25 @@ func (store *memoryStore) GetMessages(beginSeqNum, endSeqNum int) ([][]byte, err
 	return msgs, nil
 }
 
+func (store *memoryStore) SaveMessageWithTx(messageBuildData *BuildMessageInput) (output *BuildMessageOutput, err error) {
+	output, err = store.BuildMessage(messageBuildData)
+	if err != nil {
+		return
+	}
+	err = store.IncrNextSenderMsgSeqNum()
+	if err != nil {
+		return
+	}
+
+	err = store.SaveMessage(output.SeqNum, output.MsgBytes)
+	return
+}
+
 type memoryStoreFactory struct{}
 
 func (f memoryStoreFactory) Create(sessionID SessionID) (MessageStore, error) {
 	m := new(memoryStore)
+	m.messageBuilder = newMessageBuilder(m)
 	if err := m.Reset(); err != nil {
 		return m, errors.Wrap(err, "reset")
 	}

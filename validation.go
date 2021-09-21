@@ -205,13 +205,33 @@ func validateVisitGroupField(fieldDef *datadictionary.FieldDef, fieldStack []Tag
 	fieldStack = fieldStack[1:]
 
 	var childDefs []*datadictionary.FieldDef
+	var targetFields []*datadictionary.FieldDef
 	groupCount := 0
+
+	//search first index
+	firstIndex := 0
+	for i := 0; i < len(fieldDef.Fields); i++ {
+		if int(fieldStack[0].tag) == fieldDef.Fields[i].Tag() {
+			firstIndex = i
+			var prevFields, lastFields []*datadictionary.FieldDef
+			if firstIndex > 0 {
+				prevFields = fieldDef.Fields[:firstIndex]
+			}
+			if firstIndex+1 < len(fieldDef.Fields) {
+				lastFields = fieldDef.Fields[firstIndex+1:]
+			}
+			targetFields = append(targetFields, fieldDef.Fields[i]) // move to first
+			targetFields = append(targetFields, prevFields...)
+			targetFields = append(targetFields, lastFields...)
+			break
+		}
+	}
 
 	for len(fieldStack) > 0 {
 
 		//start of repeating group
-		if int(fieldStack[0].tag) == fieldDef.Fields[0].Tag() {
-			childDefs = fieldDef.Fields
+		if int(fieldStack[0].tag) == fieldDef.Fields[firstIndex].Tag() {
+			childDefs = targetFields
 			groupCount++
 		}
 

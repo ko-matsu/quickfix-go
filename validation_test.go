@@ -39,6 +39,7 @@ func TestValidate(t *testing.T) {
 		tcFieldNotFoundHeader(),
 		tcInvalidTagCheckDisabled(),
 		tcInvalidTagCheckEnabled(),
+		tcTestMarketDataRequest(),
 	}
 
 	msg := NewMessage()
@@ -51,7 +52,7 @@ func TestValidate(t *testing.T) {
 			continue
 
 		case reject != nil && test.DoNotExpectReject:
-			t.Errorf("%v: Unexpected reject: %v", test.TestName, reject)
+			t.Errorf("%v: Unexpected reject: %v, %v", test.TestName, reject, *reject.RefTagID())
 			continue
 
 		case reject == nil:
@@ -393,6 +394,58 @@ func tcInvalidTagCheckDisabled() validateTest {
 
 	return validateTest{
 		TestName:          "Invalid Tag Check - Disabled",
+		Validator:         validator,
+		MessageBytes:      msgBytes,
+		DoNotExpectReject: true,
+	}
+}
+
+func createFIX44NewMarketDataRequest() *Message {
+	msg := NewMessage()
+	msg.Header.SetField(tagBeginString, FIXString("FIX.4.4"))
+	msg.Header.SetField(tagBodyLength, FIXString("0"))
+	msg.Header.SetField(tagMsgType, FIXString("V"))
+	msg.Header.SetField(tagMsgSeqNum, FIXString("2"))
+	msg.Header.SetField(tagSenderCompID, FIXString("TAKER1"))
+	msg.Header.SetField(tagSendingTime, FIXUTCTimestamp{Time: time.Now()})
+	msg.Header.SetField(tagTargetCompID, FIXString("CG_PRICE"))
+
+	noRelatedSym :=
+		NewRepeatingGroup(Tag(146),
+			GroupTemplate{GroupElement(Tag(55)), GroupElement(Tag(207))})
+	data := noRelatedSym.Add()
+	// data.SetField(Tag(55), FIXString("SYM"))
+	data.SetField(Tag(207), FIXString("L0634TTP"))
+
+	msg.Body.SetGroup(noRelatedSym)
+	msg.Body.SetField(Tag(262), FIXString("8b255495-d04b-46dc-8980-2dfe5d20dfd8"))
+	msg.Body.SetField(Tag(263), FIXInt(1))
+	msg.Body.SetField(Tag(264), FIXInt(0))
+	msg.Body.SetField(Tag(265), FIXInt(0))
+
+	noMDEntryTypes :=
+		NewRepeatingGroup(Tag(267),
+			GroupTemplate{GroupElement(Tag(269))})
+	noMDEntryType := noMDEntryTypes.Add()
+	noMDEntryType.SetField(Tag(269), FIXInt(0))
+	noMDEntryType.SetField(Tag(269), FIXInt(1))
+	msg.Body.SetGroup(noMDEntryTypes)
+
+	msg.Trailer.SetField(tagCheckSum, FIXString("000"))
+
+	return msg
+}
+
+func tcTestMarketDataRequest() validateTest {
+	dict, _ := datadictionary.Parse("spec/FIX44.xml")
+	customValidatorSettings := defaultValidatorSettings
+	validator := NewValidator(customValidatorSettings, dict, nil)
+
+	builder := createFIX44NewMarketDataRequest()
+	msgBytes := builder.build()
+
+	return validateTest{
+		TestName:          "MarketDataRequest Check",
 		Validator:         validator,
 		MessageBytes:      msgBytes,
 		DoNotExpectReject: true,

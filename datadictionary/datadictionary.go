@@ -133,6 +133,9 @@ type FieldDef struct {
 	requiredFields []*FieldDef
 }
 
+// FieldDefs models multiple FieldDef.
+type FieldDefs []*FieldDef
+
 //NewFieldDef returns an initialized FieldDef
 func NewFieldDef(fieldType *FieldType, required bool) *FieldDef {
 	return &FieldDef{
@@ -202,6 +205,16 @@ func (f FieldDef) childTags() []int {
 	}
 
 	return tags
+}
+
+// GetOffset returns offset and exist flag.
+func (f FieldDefs) GetOffset(tag int) (offset int, ok bool) {
+	for i, field := range f {
+		if tag == field.Tag() {
+			return i, true
+		}
+	}
+	return -1, false
 }
 
 //FieldType holds information relating to a field.  Includes Tag, type, and enums, if defined.

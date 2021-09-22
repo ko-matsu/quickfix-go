@@ -229,6 +229,12 @@ func validateVisitGroupField(fieldDef *datadictionary.FieldDef, fieldStack []Tag
 
 		//start of repeating group
 		if offset, ok := checkDelimiter(int(fieldStack[0].tag), prevTag); ok {
+			// check require from skip fields
+			for _, field := range fieldDef.Fields[:offset] {
+				if field.Required() {
+					return fieldStack, RequiredTagMissing(Tag(field.Tag()))
+				}
+			}
 			childDefs = fieldDef.Fields[offset:]
 			groupCount++
 		}

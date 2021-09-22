@@ -205,33 +205,31 @@ func validateVisitGroupField(fieldDef *datadictionary.FieldDef, fieldStack []Tag
 	fieldStack = fieldStack[1:]
 
 	var childDefs []*datadictionary.FieldDef
-	var targetFields []*datadictionary.FieldDef
 	groupCount := 0
 
-	//search first index
-	firstIndex := 0
-	for i := 0; i < len(fieldDef.Fields); i++ {
-		if int(fieldStack[0].tag) == fieldDef.Fields[i].Tag() {
-			firstIndex = i
-			var prevFields, lastFields []*datadictionary.FieldDef
-			if firstIndex > 0 {
-				prevFields = fieldDef.Fields[:firstIndex]
-			}
-			if firstIndex+1 < len(fieldDef.Fields) {
-				lastFields = fieldDef.Fields[firstIndex+1:]
-			}
-			targetFields = append(targetFields, fieldDef.Fields[i]) // move to first
-			targetFields = append(targetFields, prevFields...)
-			targetFields = append(targetFields, lastFields...)
-			break
+	var defFields datadictionary.FieldDefs = fieldDef.Fields
+	prevTag := defFields[0].Tag()
+	if _, ok := defFields.GetOffset(int(fieldStack[0].tag)); ok {
+		prevTag = int(fieldStack[0].tag) // set first tag
+	}
+
+	checkDelimiter := func(tag int, prevTag int) (int, bool) {
+		if tagOffset, ok := defFields.GetOffset(tag); !ok {
+			return -1, false
+		} else if prevOffset, ok := defFields.GetOffset(prevTag); !ok {
+			return -1, false
+		} else if tagOffset > prevOffset {
+			return -1, false
+		} else {
+			return tagOffset, true
 		}
 	}
 
 	for len(fieldStack) > 0 {
 
 		//start of repeating group
-		if int(fieldStack[0].tag) == fieldDef.Fields[firstIndex].Tag() {
-			childDefs = targetFields
+		if offset, ok := checkDelimiter(int(fieldStack[0].tag), prevTag); ok {
+			childDefs = fieldDef.Fields[offset:]
 			groupCount++
 		}
 
@@ -251,6 +249,7 @@ func validateVisitGroupField(fieldDef *datadictionary.FieldDef, fieldStack []Tag
 			}
 		}
 
+		prevTag = childDefs[0].Tag()
 		childDefs = childDefs[1:]
 	}
 

@@ -137,6 +137,19 @@ func (f RepeatingGroup) findItemInGroupTemplate(t Tag) (item GroupItem, ok bool)
 	return
 }
 
+func (f RepeatingGroup) getItemInGroupTemplateOffset(t Tag) (offset int, ok bool) {
+	offset = -1
+	for i, templateField := range f.template {
+		if t == templateField.Tag() {
+			ok = true
+			offset = i
+			break
+		}
+	}
+
+	return
+}
+
 func (f RepeatingGroup) groupTagOrder() tagOrder {
 	tagMap := make(map[Tag]int)
 	for i, f := range f.template {
@@ -159,12 +172,27 @@ func (f RepeatingGroup) groupTagOrder() tagOrder {
 	}
 }
 
-func (f RepeatingGroup) delimiter() Tag {
+func (f RepeatingGroup) delimiterByDefault() Tag {
 	return f.template[0].Tag()
 }
 
-func (f RepeatingGroup) isDelimiter(t Tag) bool {
-	return t == f.delimiter()
+func (f RepeatingGroup) isDelimiter(t Tag, prevTag Tag) bool {
+	tagOffset, ok := f.getItemInGroupTemplateOffset(t)
+	if !ok {
+		return false
+	}
+	prevOffset, ok := f.getItemInGroupTemplateOffset(prevTag)
+	if !ok {
+		return false
+	}
+	return tagOffset <= prevOffset
+}
+
+func (f RepeatingGroup) getFirstDelimiter(t Tag, delimiter Tag) Tag {
+	if f.isDelimiter(t, delimiter) {
+		return t
+	}
+	return delimiter
 }
 
 func (f *RepeatingGroup) Read(tv []TagValue) ([]TagValue, error) {
@@ -178,6 +206,10 @@ func (f *RepeatingGroup) Read(tv []TagValue) ([]TagValue, error) {
 	}
 
 	tv = tv[1:cap(tv)]
+
+	delimiter := f.delimiterByDefault()
+	prevTag := tv[0].tag
+
 	tagOrdering := f.groupTagOrder()
 	group := new(Group)
 	group.initWithOrdering(tagOrdering)
@@ -192,7 +224,12 @@ func (f *RepeatingGroup) Read(tv []TagValue) ([]TagValue, error) {
 			return tv, err
 		}
 
-		if f.isDelimiter(gi.Tag()) {
+		if f.isDelimiter(gi.Tag(), prevTag) {
+			if len(f.groups) == 0 {
+				delimiter = gi.Tag() // force
+			} else {
+				delimiter = f.getFirstDelimiter(gi.Tag(), delimiter) // for logging
+			}
 			group = new(Group)
 			group.initWithOrdering(tagOrdering)
 
@@ -200,10 +237,11 @@ func (f *RepeatingGroup) Read(tv []TagValue) ([]TagValue, error) {
 		}
 
 		group.tagLookup[tvRange[0].tag] = tvRange
+		prevTag = tvRange[0].tag
 	}
 
 	if len(f.groups) != expectedGroupSize {
-		return tv, repeatingGroupFieldsOutOfOrder(f.tag, fmt.Sprintf("group %v: template is wrong or delimiter %v not found: expected %v groups, but found %v", f.tag, f.delimiter(), expectedGroupSize, len(f.groups)))
+		return tv, repeatingGroupFieldsOutOfOrder(f.tag, fmt.Sprintf("group %v: template is wrong or delimiter %v not found: expected %v groups, but found %v", f.tag, delimiter, expectedGroupSize, len(f.groups)))
 	}
 
 	return tv, err

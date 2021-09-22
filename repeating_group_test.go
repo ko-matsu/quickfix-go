@@ -168,6 +168,18 @@ func TestRepeatingGroup_Read(t *testing.T) {
 				{TagValue{tag: Tag(1), value: []byte("goodbye")}, TagValue{tag: Tag(2), value: []byte("cruel")}, TagValue{tag: Tag(3), value: []byte("world")}},
 				{TagValue{tag: Tag(1), value: []byte("another")}},
 			}},
+		{multiFieldTemplate,
+			[]TagValue{
+				{value: []byte("3")},
+				{tag: Tag(2), value: []byte("hello")},
+				{tag: Tag(2), value: []byte("goodbye")}, {tag: Tag(3), value: []byte("world")},
+				{tag: Tag(2), value: []byte("another")},
+			},
+			[][]TagValue{
+				{TagValue{tag: Tag(2), value: []byte("hello")}},
+				{TagValue{tag: Tag(2), value: []byte("goodbye")}, TagValue{tag: Tag(3), value: []byte("world")}},
+				{TagValue{tag: Tag(2), value: []byte("another")}},
+			}},
 	}
 
 	for _, test := range tests {

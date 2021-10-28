@@ -50,6 +50,7 @@ type session struct {
 	notifyLogonEvent       chan struct{}
 	stoppedSessionKeepTime time.Duration
 	stopTime               time.Time
+	hasStopByDisconnect    bool
 }
 
 func (s *session) logError(err error) {
@@ -692,6 +693,11 @@ func (s *session) onDisconnect() {
 	case <-s.notifyLogonEvent: // cleanup single buffer
 	default:
 	}
+	if s.hasStopByDisconnect && !s.stopped {
+		s.log.OnEvent("call forceStop")
+		s.forceStop()
+	}
+	s.log.OnEvent("onDisconnect finish")
 }
 
 func (s *session) onAdmin(msg interface{}) {
@@ -762,6 +768,7 @@ func (s *session) run() {
 		s.stateTimer.Stop()
 		s.peerTimer.Stop()
 		ticker.Stop()
+		s.log.OnEvent("run finish")
 	}()
 
 	for !s.Stopped() {

@@ -345,6 +345,7 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 		}
 		dynamicSession.linkedAcceptor = a
 		dynamicSession.stoppedSessionKeepTime = a.dynamicStoppedSessionKeepTime
+		dynamicSession.hasStopByDisconnect = true
 
 		a.dynamicSessionChan <- dynamicSession
 		session = dynamicSession
@@ -366,6 +367,13 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 	}()
 
 	writeLoop(netConn, msgOut, a.globalLog)
+
+	if session.hasStopByDisconnect {
+		if tmpErr := netConn.Close(); tmpErr != nil {
+			session.log.OnEventf("net.Close error: %v", tmpErr)
+		}
+	}
+	session.log.OnEvent("handleConnection finish")
 }
 
 func (a *Acceptor) dynamicSessionsLoop() {

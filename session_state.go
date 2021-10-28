@@ -46,6 +46,7 @@ func (sm *stateMachine) Connect(session *session) {
 }
 
 func (sm *stateMachine) Stop(session *session) {
+	session.log.OnEvent("call Stop")
 	sm.pendingStop = true
 	sm.setState(session, sm.State.Stop(session))
 }
@@ -135,6 +136,11 @@ func (sm *stateMachine) CheckSessionTime(session *session, now time.Time) {
 	}
 }
 
+func (sm *stateMachine) forceStop() {
+	sm.stopped = true
+	sm.notifyInSessionTime()
+}
+
 func (sm *stateMachine) setState(session *session, nextState sessionState) {
 	if !nextState.IsConnected() {
 		if sm.IsConnected() {
@@ -142,8 +148,7 @@ func (sm *stateMachine) setState(session *session, nextState sessionState) {
 		}
 
 		if sm.pendingStop {
-			sm.stopped = true
-			sm.notifyInSessionTime()
+			sm.forceStop()
 		}
 	}
 

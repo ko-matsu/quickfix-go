@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"github.com/cryptogarageinc/quickfix-go"
 	"github.com/cryptogarageinc/quickfix-go/field"
@@ -139,8 +140,8 @@ func main() {
 		return
 	}
 
-	interrupt := make(chan os.Signal)
-	signal.Notify(interrupt)
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 	<-interrupt
 
 	acceptor.Stop()

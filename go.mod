@@ -1,4 +1,4 @@
-module github.com/cryptogarageinc/quickfix-go
+module github.com/ko-matsu/quickfix-go
 
 go 1.15
 

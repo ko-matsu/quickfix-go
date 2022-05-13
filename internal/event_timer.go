@@ -39,7 +39,10 @@ func NewEventTimer(task func()) *EventTimer {
 				t.timer.Stop()
 				return
 
-			case rstTime := <-t.rst:
+			case rstTime, ok := <-t.rst:
+				if !ok {
+					continue
+				}
 				if !t.timer.Stop() {
 					select { // cleanup
 					case <-t.timer.C:

@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"fmt"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -39,6 +41,7 @@ func NewEventTimer(task func()) *EventTimer {
 				return
 
 			case rstTime, ok := <-t.rst:
+				fmt.Printf("EventTimer.run reset,%s\n", strconv.FormatBool(ok))
 				if !ok {
 					continue
 				}
@@ -48,7 +51,9 @@ func NewEventTimer(task func()) *EventTimer {
 					default:
 					}
 				}
+				fmt.Printf("EventTimer.run reset call\n")
 				t.timer.Reset(rstTime)
+				fmt.Printf("EventTimer.run reset called\n")
 			}
 		}
 	}()
@@ -61,13 +66,16 @@ func (t *EventTimer) Stop() {
 		return
 	}
 
+	fmt.Printf("EventTimer.Stop start\n")
 	t.Lock()
 	t.isClosed = true
 	close(t.done)
 	close(t.rst)
 	t.Unlock()
 
+	fmt.Printf("EventTimer.Stop waiting\n")
 	t.wg.Wait()
+	fmt.Printf("EventTimer.Stop end\n")
 }
 
 func (t *EventTimer) Reset(timeout time.Duration) {
@@ -78,7 +86,9 @@ func (t *EventTimer) Reset(timeout time.Duration) {
 	t.Lock()
 	defer t.Unlock()
 	if !t.isClosed {
+		fmt.Printf("EventTimer.Reset(%d)\n", timeout)
 		t.rst <- timeout
+		fmt.Printf("EventTimer.Reset(%d) send\n", timeout)
 	}
 }
 

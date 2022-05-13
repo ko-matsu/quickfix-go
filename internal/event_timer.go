@@ -21,7 +21,7 @@ func NewEventTimer(task func()) *EventTimer {
 		f:        task,
 		timer:    newStoppedTimer(),
 		done:     make(chan struct{}),
-		rst:      make(chan time.Duration),
+		rst:      make(chan time.Duration, 2),
 		isClosed: atomic.NewBool(false),
 	}
 
@@ -39,10 +39,7 @@ func NewEventTimer(task func()) *EventTimer {
 				t.timer.Stop()
 				return
 
-			case rstTime, ok := <-t.rst:
-				if !ok {
-					continue
-				}
+			case rstTime := <-t.rst:
 				if !t.timer.Stop() {
 					select { // cleanup
 					case <-t.timer.C:
@@ -65,7 +62,6 @@ func (t *EventTimer) Stop() {
 	t.isClosed.Store(true)
 	close(t.done)
 	t.wg.Wait()
-	close(t.rst)
 }
 
 func (t *EventTimer) Reset(timeout time.Duration) {
@@ -73,9 +69,11 @@ func (t *EventTimer) Reset(timeout time.Duration) {
 		return
 	}
 
-	if !t.isClosed.Load() {
-		t.rst <- timeout
-	}
+	go func() {
+		if !t.isClosed.Load() {
+			t.rst <- timeout
+		}
+	}()
 }
 
 func newStoppedTimer() *time.Timer {

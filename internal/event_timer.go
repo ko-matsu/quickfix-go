@@ -8,13 +8,12 @@ import (
 )
 
 type EventTimer struct {
-	f          func()
-	timer      *time.Timer
-	done       chan struct{}
-	wg         sync.WaitGroup
-	rst        chan time.Duration
-	isClosed   *atomic.Bool
-	curTimeout time.Duration
+	f        func()
+	timer    *time.Timer
+	done     chan struct{}
+	wg       sync.WaitGroup
+	rst      chan time.Duration
+	isClosed *atomic.Bool
 }
 
 func NewEventTimer(task func()) *EventTimer {
@@ -70,13 +69,9 @@ func (t *EventTimer) Reset(timeout time.Duration) {
 	if t == nil {
 		return
 	}
-	if t.curTimeout == timeout {
-		return
-	}
 
 	if !t.isClosed.Load() {
 		t.rst <- timeout
-		t.curTimeout = timeout
 	}
 }
 

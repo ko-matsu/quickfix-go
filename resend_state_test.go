@@ -3,7 +3,7 @@ package quickfix
 import (
 	"testing"
 
-	"github.com/cryptogarageinc/quickfix-go/internal"
+	"github.com/ko-matsu/quickfix-go/internal"
 	"github.com/stretchr/testify/suite"
 )
 

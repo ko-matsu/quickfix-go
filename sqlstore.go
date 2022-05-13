@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cryptogarageinc/quickfix-go/config"
 	"github.com/jinzhu/gorm"
+	"github.com/ko-matsu/quickfix-go/config"
 )
 
 type sqlStoreFactory struct {

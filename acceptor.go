@@ -13,7 +13,7 @@ import (
 	"time"
 
 	proxyproto "github.com/armon/go-proxyproto"
-	"github.com/cryptogarageinc/quickfix-go/config"
+	"github.com/ko-matsu/quickfix-go/config"
 )
 
 //Acceptor accepts connections from FIX clients and manages the associated sessions.

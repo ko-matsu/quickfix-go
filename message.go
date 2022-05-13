@@ -6,7 +6,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/cryptogarageinc/quickfix-go/datadictionary"
+	"github.com/ko-matsu/quickfix-go/datadictionary"
 )
 
 //Header is first section of a FIX Message

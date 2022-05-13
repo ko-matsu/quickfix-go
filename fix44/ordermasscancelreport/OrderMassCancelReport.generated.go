@@ -5,11 +5,11 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	"github.com/cryptogarageinc/quickfix-go"
-	"github.com/cryptogarageinc/quickfix-go/enum"
-	"github.com/cryptogarageinc/quickfix-go/field"
-	"github.com/cryptogarageinc/quickfix-go/fix44"
-	"github.com/cryptogarageinc/quickfix-go/tag"
+	"github.com/ko-matsu/quickfix-go"
+	"github.com/ko-matsu/quickfix-go/enum"
+	"github.com/ko-matsu/quickfix-go/field"
+	"github.com/ko-matsu/quickfix-go/fix44"
+	"github.com/ko-matsu/quickfix-go/tag"
 )
 
 //OrderMassCancelReport is the fix44 OrderMassCancelReport type, MsgType = r

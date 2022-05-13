@@ -1,9 +1,9 @@
 package fix44
 
 import (
-	"github.com/cryptogarageinc/quickfix-go"
-	"github.com/cryptogarageinc/quickfix-go/field"
-	"github.com/cryptogarageinc/quickfix-go/tag"
+	"github.com/ko-matsu/quickfix-go"
+	"github.com/ko-matsu/quickfix-go/field"
+	"github.com/ko-matsu/quickfix-go/tag"
 )
 
 //Trailer is the fix44 Trailer type

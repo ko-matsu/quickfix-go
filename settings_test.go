@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cryptogarageinc/quickfix-go/config"
+	"github.com/ko-matsu/quickfix-go/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"

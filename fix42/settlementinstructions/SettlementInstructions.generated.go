@@ -3,11 +3,11 @@ package settlementinstructions
 import (
 	"time"
 
-	"github.com/cryptogarageinc/quickfix-go"
-	"github.com/cryptogarageinc/quickfix-go/enum"
-	"github.com/cryptogarageinc/quickfix-go/field"
-	"github.com/cryptogarageinc/quickfix-go/fix42"
-	"github.com/cryptogarageinc/quickfix-go/tag"
+	"github.com/ko-matsu/quickfix-go"
+	"github.com/ko-matsu/quickfix-go/enum"
+	"github.com/ko-matsu/quickfix-go/field"
+	"github.com/ko-matsu/quickfix-go/fix42"
+	"github.com/ko-matsu/quickfix-go/tag"
 )
 
 //SettlementInstructions is the fix42 SettlementInstructions type, MsgType = T

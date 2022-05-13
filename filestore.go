@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cryptogarageinc/quickfix-go/config"
+	"github.com/ko-matsu/quickfix-go/config"
 	"github.com/pkg/errors"
 )
 

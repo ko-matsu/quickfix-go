@@ -4,7 +4,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/cryptogarageinc/quickfix-go/config"
+	"github.com/ko-matsu/quickfix-go/config"
 
 	proxyproto "github.com/armon/go-proxyproto"
 	"github.com/stretchr/testify/assert"

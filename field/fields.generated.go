@@ -1,11 +1,12 @@
 package field
 
 import (
-	"github.com/cryptogarageinc/quickfix-go"
-	"github.com/cryptogarageinc/quickfix-go/enum"
-	"github.com/cryptogarageinc/quickfix-go/tag"
-	"github.com/shopspring/decimal"
 	"time"
+
+	"github.com/ko-matsu/quickfix-go"
+	"github.com/ko-matsu/quickfix-go/enum"
+	"github.com/ko-matsu/quickfix-go/tag"
+	"github.com/shopspring/decimal"
 )
 
 //AccountField is a STRING field
@@ -284,7 +285,9 @@ func NewAllocAccountType(val enum.AllocAccountType) AllocAccountTypeField {
 	return AllocAccountTypeField{quickfix.FIXString(val)}
 }
 
-func (f AllocAccountTypeField) Value() enum.AllocAccountType { return enum.AllocAccountType(f.String()) }
+func (f AllocAccountTypeField) Value() enum.AllocAccountType {
+	return enum.AllocAccountType(f.String())
+}
 
 //AllocAccruedInterestAmtField is a AMT field
 type AllocAccruedInterestAmtField struct{ quickfix.FIXDecimal }
@@ -955,7 +958,9 @@ func NewApplResponseType(val enum.ApplResponseType) ApplResponseTypeField {
 	return ApplResponseTypeField{quickfix.FIXString(val)}
 }
 
-func (f ApplResponseTypeField) Value() enum.ApplResponseType { return enum.ApplResponseType(f.String()) }
+func (f ApplResponseTypeField) Value() enum.ApplResponseType {
+	return enum.ApplResponseType(f.String())
+}
 
 //ApplSeqNumField is a SEQNUM field
 type ApplSeqNumField struct{ quickfix.FIXInt }
@@ -1043,7 +1048,9 @@ func NewAssignmentMethod(val enum.AssignmentMethod) AssignmentMethodField {
 	return AssignmentMethodField{quickfix.FIXString(val)}
 }
 
-func (f AssignmentMethodField) Value() enum.AssignmentMethod { return enum.AssignmentMethod(f.String()) }
+func (f AssignmentMethodField) Value() enum.AssignmentMethod {
+	return enum.AssignmentMethod(f.String())
+}
 
 //AssignmentUnitField is a QTY field
 type AssignmentUnitField struct{ quickfix.FIXDecimal }
@@ -2169,7 +2176,9 @@ func NewCollAsgnRespType(val enum.CollAsgnRespType) CollAsgnRespTypeField {
 	return CollAsgnRespTypeField{quickfix.FIXString(val)}
 }
 
-func (f CollAsgnRespTypeField) Value() enum.CollAsgnRespType { return enum.CollAsgnRespType(f.String()) }
+func (f CollAsgnRespTypeField) Value() enum.CollAsgnRespType {
+	return enum.CollAsgnRespType(f.String())
+}
 
 //CollAsgnTransTypeField is a enum.CollAsgnTransType field
 type CollAsgnTransTypeField struct{ quickfix.FIXString }
@@ -2483,7 +2492,9 @@ func NewComplexEventType(val enum.ComplexEventType) ComplexEventTypeField {
 	return ComplexEventTypeField{quickfix.FIXString(val)}
 }
 
-func (f ComplexEventTypeField) Value() enum.ComplexEventType { return enum.ComplexEventType(f.String()) }
+func (f ComplexEventTypeField) Value() enum.ComplexEventType {
+	return enum.ComplexEventType(f.String())
+}
 
 //ComplexOptPayoutAmountField is a AMT field
 type ComplexOptPayoutAmountField struct{ quickfix.FIXDecimal }
@@ -2560,7 +2571,9 @@ func NewConfirmRejReason(val enum.ConfirmRejReason) ConfirmRejReasonField {
 	return ConfirmRejReasonField{quickfix.FIXString(val)}
 }
 
-func (f ConfirmRejReasonField) Value() enum.ConfirmRejReason { return enum.ConfirmRejReason(f.String()) }
+func (f ConfirmRejReasonField) Value() enum.ConfirmRejReason {
+	return enum.ConfirmRejReason(f.String())
+}
 
 //ConfirmReqIDField is a STRING field
 type ConfirmReqIDField struct{ quickfix.FIXString }
@@ -2597,7 +2610,9 @@ func NewConfirmTransType(val enum.ConfirmTransType) ConfirmTransTypeField {
 	return ConfirmTransTypeField{quickfix.FIXString(val)}
 }
 
-func (f ConfirmTransTypeField) Value() enum.ConfirmTransType { return enum.ConfirmTransType(f.String()) }
+func (f ConfirmTransTypeField) Value() enum.ConfirmTransType {
+	return enum.ConfirmTransType(f.String())
+}
 
 //ConfirmTypeField is a enum.ConfirmType field
 type ConfirmTypeField struct{ quickfix.FIXString }
@@ -2858,7 +2873,9 @@ func (f ContractSettlMonthField) Value() string { return f.String() }
 type ContraryInstructionIndicatorField struct{ quickfix.FIXBoolean }
 
 //Tag returns tag.ContraryInstructionIndicator (719)
-func (f ContraryInstructionIndicatorField) Tag() quickfix.Tag { return tag.ContraryInstructionIndicator }
+func (f ContraryInstructionIndicatorField) Tag() quickfix.Tag {
+	return tag.ContraryInstructionIndicator
+}
 
 //NewContraryInstructionIndicator returns a new ContraryInstructionIndicatorField initialized with val
 func NewContraryInstructionIndicator(val bool) ContraryInstructionIndicatorField {
@@ -3163,7 +3180,9 @@ func NewCxlRejResponseTo(val enum.CxlRejResponseTo) CxlRejResponseToField {
 	return CxlRejResponseToField{quickfix.FIXString(val)}
 }
 
-func (f CxlRejResponseToField) Value() enum.CxlRejResponseTo { return enum.CxlRejResponseTo(f.String()) }
+func (f CxlRejResponseToField) Value() enum.CxlRejResponseTo {
+	return enum.CxlRejResponseTo(f.String())
+}
 
 //CxlTypeField is a enum.CxlType field
 type CxlTypeField struct{ quickfix.FIXString }
@@ -3489,7 +3508,9 @@ func (f DerivativeCapPriceField) Value() (val decimal.Decimal) { return f.Decima
 type DerivativeContractMultiplierField struct{ quickfix.FIXDecimal }
 
 //Tag returns tag.DerivativeContractMultiplier (1266)
-func (f DerivativeContractMultiplierField) Tag() quickfix.Tag { return tag.DerivativeContractMultiplier }
+func (f DerivativeContractMultiplierField) Tag() quickfix.Tag {
+	return tag.DerivativeContractMultiplier
+}
 
 //NewDerivativeContractMultiplier returns a new DerivativeContractMultiplierField initialized with val and scale
 func NewDerivativeContractMultiplier(val decimal.Decimal, scale int32) DerivativeContractMultiplierField {
@@ -3517,7 +3538,9 @@ func (f DerivativeContractMultiplierUnitField) Value() int { return f.Int() }
 type DerivativeContractSettlMonthField struct{ quickfix.FIXString }
 
 //Tag returns tag.DerivativeContractSettlMonth (1285)
-func (f DerivativeContractSettlMonthField) Tag() quickfix.Tag { return tag.DerivativeContractSettlMonth }
+func (f DerivativeContractSettlMonthField) Tag() quickfix.Tag {
+	return tag.DerivativeContractSettlMonth
+}
 
 //NewDerivativeContractSettlMonth returns a new DerivativeContractSettlMonthField initialized with val
 func NewDerivativeContractSettlMonth(val string) DerivativeContractSettlMonthField {
@@ -4039,7 +4062,9 @@ func (f DerivativePriceQuoteMethodField) Value() string { return f.String() }
 type DerivativePriceUnitOfMeasureField struct{ quickfix.FIXString }
 
 //Tag returns tag.DerivativePriceUnitOfMeasure (1315)
-func (f DerivativePriceUnitOfMeasureField) Tag() quickfix.Tag { return tag.DerivativePriceUnitOfMeasure }
+func (f DerivativePriceUnitOfMeasureField) Tag() quickfix.Tag {
+	return tag.DerivativePriceUnitOfMeasure
+}
 
 //NewDerivativePriceUnitOfMeasure returns a new DerivativePriceUnitOfMeasureField initialized with val
 func NewDerivativePriceUnitOfMeasure(val string) DerivativePriceUnitOfMeasureField {
@@ -6038,7 +6063,9 @@ func NewFlowScheduleType(val enum.FlowScheduleType) FlowScheduleTypeField {
 	return FlowScheduleTypeField{quickfix.FIXString(val)}
 }
 
-func (f FlowScheduleTypeField) Value() enum.FlowScheduleType { return enum.FlowScheduleType(f.String()) }
+func (f FlowScheduleTypeField) Value() enum.FlowScheduleType {
+	return enum.FlowScheduleType(f.String())
+}
 
 //ForexReqField is a BOOLEAN field
 type ForexReqField struct{ quickfix.FIXBoolean }
@@ -6775,7 +6802,9 @@ func NewLastLiquidityInd(val enum.LastLiquidityInd) LastLiquidityIndField {
 	return LastLiquidityIndField{quickfix.FIXString(val)}
 }
 
-func (f LastLiquidityIndField) Value() enum.LastLiquidityInd { return enum.LastLiquidityInd(f.String()) }
+func (f LastLiquidityIndField) Value() enum.LastLiquidityInd {
+	return enum.LastLiquidityInd(f.String())
+}
 
 //LastMktField is a EXCHANGE field
 type LastMktField struct{ quickfix.FIXString }
@@ -8189,7 +8218,9 @@ func NewLiquidityIndType(val enum.LiquidityIndType) LiquidityIndTypeField {
 	return LiquidityIndTypeField{quickfix.FIXString(val)}
 }
 
-func (f LiquidityIndTypeField) Value() enum.LiquidityIndType { return enum.LiquidityIndType(f.String()) }
+func (f LiquidityIndTypeField) Value() enum.LiquidityIndType {
+	return enum.LiquidityIndType(f.String())
+}
 
 //LiquidityNumSecuritiesField is a INT field
 type LiquidityNumSecuritiesField struct{ quickfix.FIXInt }
@@ -8266,7 +8297,9 @@ func NewListExecInstType(val enum.ListExecInstType) ListExecInstTypeField {
 	return ListExecInstTypeField{quickfix.FIXString(val)}
 }
 
-func (f ListExecInstTypeField) Value() enum.ListExecInstType { return enum.ListExecInstType(f.String()) }
+func (f ListExecInstTypeField) Value() enum.ListExecInstType {
+	return enum.ListExecInstType(f.String())
+}
 
 //ListIDField is a STRING field
 type ListIDField struct{ quickfix.FIXString }
@@ -8341,7 +8374,9 @@ func NewListRejectReason(val enum.ListRejectReason) ListRejectReasonField {
 	return ListRejectReasonField{quickfix.FIXString(val)}
 }
 
-func (f ListRejectReasonField) Value() enum.ListRejectReason { return enum.ListRejectReason(f.String()) }
+func (f ListRejectReasonField) Value() enum.ListRejectReason {
+	return enum.ListRejectReason(f.String())
+}
 
 //ListSeqNoField is a INT field
 type ListSeqNoField struct{ quickfix.FIXInt }
@@ -11807,7 +11842,9 @@ func (f NoUnderlyingAmountsField) Value() int { return f.Int() }
 type NoUnderlyingLegSecurityAltIDField struct{ quickfix.FIXInt }
 
 //Tag returns tag.NoUnderlyingLegSecurityAltID (1334)
-func (f NoUnderlyingLegSecurityAltIDField) Tag() quickfix.Tag { return tag.NoUnderlyingLegSecurityAltID }
+func (f NoUnderlyingLegSecurityAltIDField) Tag() quickfix.Tag {
+	return tag.NoUnderlyingLegSecurityAltID
+}
 
 //NewNoUnderlyingLegSecurityAltID returns a new NoUnderlyingLegSecurityAltIDField initialized with val
 func NewNoUnderlyingLegSecurityAltID(val int) NoUnderlyingLegSecurityAltIDField {
@@ -11872,7 +11909,9 @@ func (f NoUndlyInstrumentPartiesField) Value() int { return f.Int() }
 type NoUndlyInstrumentPartySubIDsField struct{ quickfix.FIXInt }
 
 //Tag returns tag.NoUndlyInstrumentPartySubIDs (1062)
-func (f NoUndlyInstrumentPartySubIDsField) Tag() quickfix.Tag { return tag.NoUndlyInstrumentPartySubIDs }
+func (f NoUndlyInstrumentPartySubIDsField) Tag() quickfix.Tag {
+	return tag.NoUndlyInstrumentPartySubIDs
+}
 
 //NewNoUndlyInstrumentPartySubIDs returns a new NoUndlyInstrumentPartySubIDsField initialized with val
 func NewNoUndlyInstrumentPartySubIDs(val int) NoUndlyInstrumentPartySubIDsField {
@@ -13577,7 +13616,9 @@ func NewPriceQuoteMethod(val enum.PriceQuoteMethod) PriceQuoteMethodField {
 	return PriceQuoteMethodField{quickfix.FIXString(val)}
 }
 
-func (f PriceQuoteMethodField) Value() enum.PriceQuoteMethod { return enum.PriceQuoteMethod(f.String()) }
+func (f PriceQuoteMethodField) Value() enum.PriceQuoteMethod {
+	return enum.PriceQuoteMethod(f.String())
+}
 
 //PriceTypeField is a enum.PriceType field
 type PriceTypeField struct{ quickfix.FIXString }
@@ -13880,7 +13921,9 @@ func NewQuoteEntryStatus(val enum.QuoteEntryStatus) QuoteEntryStatusField {
 	return QuoteEntryStatusField{quickfix.FIXString(val)}
 }
 
-func (f QuoteEntryStatusField) Value() enum.QuoteEntryStatus { return enum.QuoteEntryStatus(f.String()) }
+func (f QuoteEntryStatusField) Value() enum.QuoteEntryStatus {
+	return enum.QuoteEntryStatus(f.String())
+}
 
 //QuoteIDField is a STRING field
 type QuoteIDField struct{ quickfix.FIXString }
@@ -13984,7 +14027,9 @@ func NewQuoteRequestType(val enum.QuoteRequestType) QuoteRequestTypeField {
 	return QuoteRequestTypeField{quickfix.FIXString(val)}
 }
 
-func (f QuoteRequestTypeField) Value() enum.QuoteRequestType { return enum.QuoteRequestType(f.String()) }
+func (f QuoteRequestTypeField) Value() enum.QuoteRequestType {
+	return enum.QuoteRequestType(f.String())
+}
 
 //QuoteRespIDField is a STRING field
 type QuoteRespIDField struct{ quickfix.FIXString }
@@ -14352,7 +14397,9 @@ func NewRefOrderIDSource(val enum.RefOrderIDSource) RefOrderIDSourceField {
 	return RefOrderIDSourceField{quickfix.FIXString(val)}
 }
 
-func (f RefOrderIDSourceField) Value() enum.RefOrderIDSource { return enum.RefOrderIDSource(f.String()) }
+func (f RefOrderIDSourceField) Value() enum.RefOrderIDSource {
+	return enum.RefOrderIDSource(f.String())
+}
 
 //RefSeqNumField is a SEQNUM field
 type RefSeqNumField struct{ quickfix.FIXInt }
@@ -14666,7 +14713,9 @@ func (f RelatedContextPartySubIDField) Value() string { return f.String() }
 type RelatedContextPartySubIDTypeField struct{ quickfix.FIXInt }
 
 //Tag returns tag.RelatedContextPartySubIDType (1581)
-func (f RelatedContextPartySubIDTypeField) Tag() quickfix.Tag { return tag.RelatedContextPartySubIDType }
+func (f RelatedContextPartySubIDTypeField) Tag() quickfix.Tag {
+	return tag.RelatedContextPartySubIDType
+}
 
 //NewRelatedContextPartySubIDType returns a new RelatedContextPartySubIDTypeField initialized with val
 func NewRelatedContextPartySubIDType(val int) RelatedContextPartySubIDTypeField {
@@ -14983,7 +15032,9 @@ func (f RelationshipRiskMaturityMonthYearField) Value() string { return f.String
 type RelationshipRiskMaturityTimeField struct{ quickfix.FIXString }
 
 //Tag returns tag.RelationshipRiskMaturityTime (1603)
-func (f RelationshipRiskMaturityTimeField) Tag() quickfix.Tag { return tag.RelationshipRiskMaturityTime }
+func (f RelationshipRiskMaturityTimeField) Tag() quickfix.Tag {
+	return tag.RelationshipRiskMaturityTime
+}
 
 //NewRelationshipRiskMaturityTime returns a new RelationshipRiskMaturityTimeField initialized with val
 func NewRelationshipRiskMaturityTime(val string) RelationshipRiskMaturityTimeField {
@@ -15082,7 +15133,9 @@ func (f RelationshipRiskSecurityAltIDSourceField) Value() string { return f.Stri
 type RelationshipRiskSecurityDescField struct{ quickfix.FIXString }
 
 //Tag returns tag.RelationshipRiskSecurityDesc (1610)
-func (f RelationshipRiskSecurityDescField) Tag() quickfix.Tag { return tag.RelationshipRiskSecurityDesc }
+func (f RelationshipRiskSecurityDescField) Tag() quickfix.Tag {
+	return tag.RelationshipRiskSecurityDesc
+}
 
 //NewRelationshipRiskSecurityDesc returns a new RelationshipRiskSecurityDescField initialized with val
 func NewRelationshipRiskSecurityDesc(val string) RelationshipRiskSecurityDescField {
@@ -15168,7 +15221,9 @@ func (f RelationshipRiskSecuritySubTypeField) Value() string { return f.String()
 type RelationshipRiskSecurityTypeField struct{ quickfix.FIXString }
 
 //Tag returns tag.RelationshipRiskSecurityType (1600)
-func (f RelationshipRiskSecurityTypeField) Tag() quickfix.Tag { return tag.RelationshipRiskSecurityType }
+func (f RelationshipRiskSecurityTypeField) Tag() quickfix.Tag {
+	return tag.RelationshipRiskSecurityType
+}
 
 //NewRelationshipRiskSecurityType returns a new RelationshipRiskSecurityTypeField initialized with val
 func NewRelationshipRiskSecurityType(val string) RelationshipRiskSecurityTypeField {
@@ -16361,7 +16416,9 @@ func NewSecurityIDSource(val enum.SecurityIDSource) SecurityIDSourceField {
 	return SecurityIDSourceField{quickfix.FIXString(val)}
 }
 
-func (f SecurityIDSourceField) Value() enum.SecurityIDSource { return enum.SecurityIDSource(f.String()) }
+func (f SecurityIDSourceField) Value() enum.SecurityIDSource {
+	return enum.SecurityIDSource(f.String())
+}
 
 //SecurityListDescField is a STRING field
 type SecurityListDescField struct{ quickfix.FIXString }
@@ -16426,7 +16483,9 @@ func NewSecurityListType(val enum.SecurityListType) SecurityListTypeField {
 	return SecurityListTypeField{quickfix.FIXString(val)}
 }
 
-func (f SecurityListTypeField) Value() enum.SecurityListType { return enum.SecurityListType(f.String()) }
+func (f SecurityListTypeField) Value() enum.SecurityListType {
+	return enum.SecurityListType(f.String())
+}
 
 //SecurityListTypeSourceField is a enum.SecurityListTypeSource field
 type SecurityListTypeSourceField struct{ quickfix.FIXString }
@@ -17222,7 +17281,9 @@ func NewSettlObligSource(val enum.SettlObligSource) SettlObligSourceField {
 	return SettlObligSourceField{quickfix.FIXString(val)}
 }
 
-func (f SettlObligSourceField) Value() enum.SettlObligSource { return enum.SettlObligSource(f.String()) }
+func (f SettlObligSourceField) Value() enum.SettlObligSource {
+	return enum.SettlObligSource(f.String())
+}
 
 //SettlObligTransTypeField is a enum.SettlObligTransType field
 type SettlObligTransTypeField struct{ quickfix.FIXString }
@@ -18204,7 +18265,9 @@ func (f StrikePriceBoundaryMethodField) Value() enum.StrikePriceBoundaryMethod {
 type StrikePriceBoundaryPrecisionField struct{ quickfix.FIXDecimal }
 
 //Tag returns tag.StrikePriceBoundaryPrecision (1480)
-func (f StrikePriceBoundaryPrecisionField) Tag() quickfix.Tag { return tag.StrikePriceBoundaryPrecision }
+func (f StrikePriceBoundaryPrecisionField) Tag() quickfix.Tag {
+	return tag.StrikePriceBoundaryPrecision
+}
 
 //NewStrikePriceBoundaryPrecision returns a new StrikePriceBoundaryPrecisionField initialized with val and scale
 func NewStrikePriceBoundaryPrecision(val decimal.Decimal, scale int32) StrikePriceBoundaryPrecisionField {
@@ -18482,7 +18545,9 @@ func NewTaxAdvantageType(val enum.TaxAdvantageType) TaxAdvantageTypeField {
 	return TaxAdvantageTypeField{quickfix.FIXString(val)}
 }
 
-func (f TaxAdvantageTypeField) Value() enum.TaxAdvantageType { return enum.TaxAdvantageType(f.String()) }
+func (f TaxAdvantageTypeField) Value() enum.TaxAdvantageType {
+	return enum.TaxAdvantageType(f.String())
+}
 
 //TerminationTypeField is a enum.TerminationType field
 type TerminationTypeField struct{ quickfix.FIXString }
@@ -19438,7 +19503,9 @@ func NewTradeRequestType(val enum.TradeRequestType) TradeRequestTypeField {
 	return TradeRequestTypeField{quickfix.FIXString(val)}
 }
 
-func (f TradeRequestTypeField) Value() enum.TradeRequestType { return enum.TradeRequestType(f.String()) }
+func (f TradeRequestTypeField) Value() enum.TradeRequestType {
+	return enum.TradeRequestType(f.String())
+}
 
 //TradeTypeField is a enum.TradeType field
 type TradeTypeField struct{ quickfix.FIXString }
@@ -19527,7 +19594,9 @@ func NewTradingSessionID(val enum.TradingSessionID) TradingSessionIDField {
 	return TradingSessionIDField{quickfix.FIXString(val)}
 }
 
-func (f TradingSessionIDField) Value() enum.TradingSessionID { return enum.TradingSessionID(f.String()) }
+func (f TradingSessionIDField) Value() enum.TradingSessionID {
+	return enum.TradingSessionID(f.String())
+}
 
 //TradingSessionSubIDField is a enum.TradingSessionSubID field
 type TradingSessionSubIDField struct{ quickfix.FIXString }
@@ -19775,7 +19844,9 @@ func NewTriggerOrderType(val enum.TriggerOrderType) TriggerOrderTypeField {
 	return TriggerOrderTypeField{quickfix.FIXString(val)}
 }
 
-func (f TriggerOrderTypeField) Value() enum.TriggerOrderType { return enum.TriggerOrderType(f.String()) }
+func (f TriggerOrderTypeField) Value() enum.TriggerOrderType {
+	return enum.TriggerOrderType(f.String())
+}
 
 //TriggerPriceField is a PRICE field
 type TriggerPriceField struct{ quickfix.FIXDecimal }
@@ -19814,7 +19885,9 @@ func NewTriggerPriceType(val enum.TriggerPriceType) TriggerPriceTypeField {
 	return TriggerPriceTypeField{quickfix.FIXString(val)}
 }
 
-func (f TriggerPriceTypeField) Value() enum.TriggerPriceType { return enum.TriggerPriceType(f.String()) }
+func (f TriggerPriceTypeField) Value() enum.TriggerPriceType {
+	return enum.TriggerPriceType(f.String())
+}
 
 //TriggerPriceTypeScopeField is a enum.TriggerPriceTypeScope field
 type TriggerPriceTypeScopeField struct{ quickfix.FIXString }
@@ -20068,7 +20141,9 @@ func (f UnderlyingCollectAmountField) Value() (val decimal.Decimal) { return f.D
 type UnderlyingContractMultiplierField struct{ quickfix.FIXDecimal }
 
 //Tag returns tag.UnderlyingContractMultiplier (436)
-func (f UnderlyingContractMultiplierField) Tag() quickfix.Tag { return tag.UnderlyingContractMultiplier }
+func (f UnderlyingContractMultiplierField) Tag() quickfix.Tag {
+	return tag.UnderlyingContractMultiplier
+}
 
 //NewUnderlyingContractMultiplier returns a new UnderlyingContractMultiplierField initialized with val and scale
 func NewUnderlyingContractMultiplier(val decimal.Decimal, scale int32) UnderlyingContractMultiplierField {
@@ -20620,7 +20695,9 @@ func (f UnderlyingLegSecurityIDSourceField) Value() string { return f.String() }
 type UnderlyingLegSecuritySubTypeField struct{ quickfix.FIXString }
 
 //Tag returns tag.UnderlyingLegSecuritySubType (1338)
-func (f UnderlyingLegSecuritySubTypeField) Tag() quickfix.Tag { return tag.UnderlyingLegSecuritySubType }
+func (f UnderlyingLegSecuritySubTypeField) Tag() quickfix.Tag {
+	return tag.UnderlyingLegSecuritySubType
+}
 
 //NewUnderlyingLegSecuritySubType returns a new UnderlyingLegSecuritySubTypeField initialized with val
 func NewUnderlyingLegSecuritySubType(val string) UnderlyingLegSecuritySubTypeField {
@@ -20824,7 +20901,9 @@ func (f UnderlyingPriceDeterminationMethodField) Value() enum.UnderlyingPriceDet
 type UnderlyingPriceUnitOfMeasureField struct{ quickfix.FIXString }
 
 //Tag returns tag.UnderlyingPriceUnitOfMeasure (1424)
-func (f UnderlyingPriceUnitOfMeasureField) Tag() quickfix.Tag { return tag.UnderlyingPriceUnitOfMeasure }
+func (f UnderlyingPriceUnitOfMeasureField) Tag() quickfix.Tag {
+	return tag.UnderlyingPriceUnitOfMeasure
+}
 
 //NewUnderlyingPriceUnitOfMeasure returns a new UnderlyingPriceUnitOfMeasureField initialized with val
 func NewUnderlyingPriceUnitOfMeasure(val string) UnderlyingPriceUnitOfMeasureField {
@@ -21355,7 +21434,9 @@ func (f UndlyInstrumentPartyIDField) Value() string { return f.String() }
 type UndlyInstrumentPartyIDSourceField struct{ quickfix.FIXString }
 
 //Tag returns tag.UndlyInstrumentPartyIDSource (1060)
-func (f UndlyInstrumentPartyIDSourceField) Tag() quickfix.Tag { return tag.UndlyInstrumentPartyIDSource }
+func (f UndlyInstrumentPartyIDSourceField) Tag() quickfix.Tag {
+	return tag.UndlyInstrumentPartyIDSource
+}
 
 //NewUndlyInstrumentPartyIDSource returns a new UndlyInstrumentPartyIDSourceField initialized with val
 func NewUndlyInstrumentPartyIDSource(val string) UndlyInstrumentPartyIDSourceField {

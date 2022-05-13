@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/cryptogarageinc/quickfix-go/config"
+	"github.com/ko-matsu/quickfix-go/config"
 )
 
 func loadTLSConfig(settings *SessionSettings) (tlsConfig *tls.Config, err error) {

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cryptogarageinc/quickfix-go/internal"
+	"github.com/ko-matsu/quickfix-go/internal"
 )
 
 var sessionsLock sync.RWMutex

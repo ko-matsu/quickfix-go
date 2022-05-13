@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cryptogarageinc/quickfix-go/config"
-	"github.com/cryptogarageinc/quickfix-go/datadictionary"
-	"github.com/cryptogarageinc/quickfix-go/internal"
+	"github.com/ko-matsu/quickfix-go/config"
+	"github.com/ko-matsu/quickfix-go/datadictionary"
+	"github.com/ko-matsu/quickfix-go/internal"
 )
 
 var dayLookup = map[string]time.Weekday{

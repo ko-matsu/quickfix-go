@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/cryptogarageinc/quickfix-go/config"
+	"github.com/ko-matsu/quickfix-go/config"
 	"golang.org/x/net/proxy"
 )
 

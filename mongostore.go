@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cryptogarageinc/quickfix-go/config"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
+	"github.com/ko-matsu/quickfix-go/config"
 	"github.com/pkg/errors"
 )
 

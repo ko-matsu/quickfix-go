@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cryptogarageinc/quickfix-go/datadictionary"
-	"github.com/cryptogarageinc/quickfix-go/internal"
+	"github.com/ko-matsu/quickfix-go/datadictionary"
+	"github.com/ko-matsu/quickfix-go/internal"
 )
 
 //The Session is the primary FIX abstraction for message communication

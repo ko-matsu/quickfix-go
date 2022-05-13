@@ -3,17 +3,16 @@ package internal
 import (
 	"sync"
 	"time"
-
-	"go.uber.org/atomic"
 )
 
 type EventTimer struct {
+	sync.Mutex
 	f        func()
 	timer    *time.Timer
 	done     chan struct{}
 	wg       sync.WaitGroup
 	rst      chan time.Duration
-	isClosed *atomic.Bool
+	isClosed bool
 }
 
 func NewEventTimer(task func()) *EventTimer {
@@ -22,7 +21,7 @@ func NewEventTimer(task func()) *EventTimer {
 		timer:    newStoppedTimer(),
 		done:     make(chan struct{}),
 		rst:      make(chan time.Duration),
-		isClosed: atomic.NewBool(false),
+		isClosed: false,
 	}
 
 	t.wg.Add(1)
@@ -62,10 +61,13 @@ func (t *EventTimer) Stop() {
 		return
 	}
 
-	t.isClosed.Store(true)
+	t.Lock()
+	t.isClosed = true
 	close(t.done)
-	t.wg.Wait()
 	close(t.rst)
+	t.Unlock()
+
+	t.wg.Wait()
 }
 
 func (t *EventTimer) Reset(timeout time.Duration) {
@@ -73,7 +75,9 @@ func (t *EventTimer) Reset(timeout time.Duration) {
 		return
 	}
 
-	if !t.isClosed.Load() {
+	t.Lock()
+	defer t.Unlock()
+	if !t.isClosed {
 		t.rst <- timeout
 	}
 }

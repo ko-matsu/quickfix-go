@@ -53,6 +53,11 @@ type session struct {
 	hasStopByDisconnect    bool
 }
 
+func (s *session) SetLog(logger Log) {
+	s.log = logger
+	s.stateMachine.logger = &s.log
+}
+
 func (s *session) logError(err error) {
 	s.log.OnEvent(err.Error())
 }

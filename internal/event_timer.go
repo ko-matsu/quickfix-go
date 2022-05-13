@@ -23,7 +23,7 @@ func NewEventTimer(task func()) *EventTimer {
 		f:        task,
 		timer:    newStoppedTimer(),
 		done:     make(chan struct{}),
-		rst:      make(chan time.Duration, 5), // for anti-blocking
+		rst:      make(chan time.Duration, 2),
 		isClosed: atomic.NewBool(false),
 	}
 
@@ -73,7 +73,6 @@ func (t *EventTimer) Stop() {
 
 	fmt.Printf("EventTimer.Stop waiting\n")
 	t.wg.Wait()
-	close(t.rst)
 	fmt.Printf("EventTimer.Stop end\n")
 }
 
@@ -82,11 +81,13 @@ func (t *EventTimer) Reset(timeout time.Duration) {
 		return
 	}
 
-	if !t.isClosed.Load() {
-		fmt.Printf("EventTimer.Reset(%d)\n", timeout)
-		t.rst <- timeout
-		fmt.Printf("EventTimer.Reset(%d) send\n", timeout)
-	}
+	go func() {
+		if !t.isClosed.Load() {
+			fmt.Printf("EventTimer.Reset(%d)\n", timeout)
+			t.rst <- timeout
+			fmt.Printf("EventTimer.Reset(%d) send\n", timeout)
+		}
+	}()
 }
 
 func newStoppedTimer() *time.Timer {

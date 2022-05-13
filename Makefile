@@ -27,8 +27,7 @@ vet:
 	go vet ./_test
 
 lint:
-	go get golang.org/x/lint/golint
-	golint .
+	golangci-lint run
 
 test: 
 	go test -v -cover -p=1 -count=1 . ./datadictionary ./internal

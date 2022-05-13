@@ -130,8 +130,11 @@ func (i *Initiator) handleConnection(session *session, tlsConfig *tls.Config, di
 	}()
 
 	defer func() {
+		session.log.OnEventf("handleConnection end. call stop")
 		session.stop()
+		session.log.OnEventf("handleConnection end. waiting")
 		wg.Wait()
+		session.log.OnEventf("handleConnection end. wait done")
 	}()
 
 	connectionAttempt := 0
@@ -177,13 +180,17 @@ func (i *Initiator) handleConnection(session *session, tlsConfig *tls.Config, di
 			goto reconnect
 		}
 
-		go readLoop(newParser(bufio.NewReader(netConn)), msgIn)
+		go func() {
+			readLoop(newParser(bufio.NewReader(netConn)), msgIn)
+			session.log.OnEventf("read end")
+		}()
 		disconnected = make(chan interface{})
 		go func() {
 			writeLoop(netConn, msgOut, session.log)
 			if err := netConn.Close(); err != nil {
 				session.log.OnEvent(err.Error())
 			}
+			session.log.OnEventf("disconnected")
 			close(disconnected)
 		}()
 

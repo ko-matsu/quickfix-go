@@ -21,7 +21,7 @@ func NewEventTimer(task func()) *EventTimer {
 		f:        task,
 		timer:    newStoppedTimer(),
 		done:     make(chan struct{}),
-		rst:      make(chan time.Duration, 2),
+		rst:      make(chan time.Duration),
 		isClosed: atomic.NewBool(false),
 	}
 

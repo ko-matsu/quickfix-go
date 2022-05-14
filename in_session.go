@@ -66,6 +66,8 @@ func (state inSession) Timeout(session *session, event internal.Event) (nextStat
 		session.log.OnEvent("Sent test request TEST")
 		session.peerTimer.Reset(time.Duration(float64(1.2) * float64(session.HeartBtInt)))
 		return pendingTimeout{state}
+	default:
+		session.log.OnEventf("receive event: %s, %v", state.String(), event)
 	}
 
 	return state

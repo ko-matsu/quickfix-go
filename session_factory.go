@@ -256,10 +256,11 @@ func (f sessionFactory) newSession(
 	} else if err = f.buildAcceptorSettings(s, settings); err != nil {
 		return
 	}
-
-	if s.log, err = logFactory.CreateSessionLog(s.sessionID); err != nil {
+	log, err := logFactory.CreateSessionLog(s.sessionID)
+	if err != nil {
 		return
 	}
+	s.SetLog(log)
 
 	if s.store, err = storeFactory.Create(s.sessionID); err != nil {
 		return

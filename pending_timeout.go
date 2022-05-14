@@ -11,6 +11,8 @@ func (s pendingTimeout) Timeout(session *session, event internal.Event) (nextSta
 	case internal.PeerTimeout:
 		session.log.OnEvent("Session Timeout")
 		return latentState{}
+	default:
+		session.log.OnEventf("receive event: %s, %v", s.String(), event)
 	}
 
 	return s

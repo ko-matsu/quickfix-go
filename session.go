@@ -53,6 +53,11 @@ type session struct {
 	hasStopByDisconnect    bool
 }
 
+func (s *session) SetLog(logger Log) {
+	s.log = logger
+	s.stateMachine.logger = &s.log
+}
+
 func (s *session) logError(err error) {
 	s.log.OnEvent(err.Error())
 }
@@ -752,13 +757,19 @@ func (s *session) run() {
 	s.stateTimer = internal.NewEventTimer(func() {
 		select {
 		case <-done:
-		case s.sessionEvent <- internal.NeedHeartbeat:
+		default:
+			go func() {
+				s.sessionEvent <- internal.NeedHeartbeat
+			}()
 		}
 	})
 	s.peerTimer = internal.NewEventTimer(func() {
 		select {
 		case <-done:
-		case s.sessionEvent <- internal.PeerTimeout:
+		default:
+			go func() {
+				s.sessionEvent <- internal.PeerTimeout
+			}()
 		}
 	})
 	ticker := time.NewTicker(time.Second)

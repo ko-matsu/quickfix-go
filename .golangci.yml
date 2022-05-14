@@ -1,0 +1,22 @@
+service:
+  golangci-lint-version: 1.46.0
+run:
+  deadline: 30m
+  skip-dirs:
+    - cover
+    - fix42
+    - fix44
+  modules-download-mode: readonly
+
+issues:
+  exclude-use-default: false
+  exclude-rules:
+    - linters:
+        - errcheck
+      text: " is not checke"
+
+linters:
+  enable:
+    - exportloopref
+  disable:
+    - structcheck

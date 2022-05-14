@@ -2,7 +2,6 @@ package internal
 
 import (
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
@@ -23,7 +22,7 @@ func NewEventTimer(task func()) *EventTimer {
 		f:        task,
 		timer:    newStoppedTimer(),
 		done:     make(chan struct{}),
-		rst:      make(chan time.Duration, 2),
+		rst:      make(chan time.Duration),
 		isClosed: atomic.NewBool(false),
 	}
 
@@ -41,11 +40,8 @@ func NewEventTimer(task func()) *EventTimer {
 				t.timer.Stop()
 				return
 
-			case rstTime, ok := <-t.rst:
-				fmt.Printf("EventTimer.run reset,%s\n", strconv.FormatBool(ok))
-				if !ok {
-					continue
-				}
+			case rstTime := <-t.rst:
+				fmt.Printf("EventTimer.run reset,%d\n", rstTime)
 				if !t.timer.Stop() {
 					select { // cleanup
 					case <-t.timer.C:

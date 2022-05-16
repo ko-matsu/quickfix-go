@@ -11,7 +11,7 @@ type stateMachine struct {
 	State                 sessionState
 	pendingStop, stopped  bool
 	notifyOnInSessionTime chan interface{}
-	logger                *Log
+	log                   *Log
 }
 
 func (sm *stateMachine) Start(s *session) {
@@ -153,8 +153,8 @@ func (sm *stateMachine) setState(session *session, nextState sessionState) {
 		}
 	}
 
-	if sm.State.String() != nextState.String() && sm.logger != nil {
-		(*sm.logger).OnEventf("change state: %s -> %s", sm.State.String(), nextState.String())
+	if sm.State.String() != nextState.String() && sm.log != nil {
+		(*sm.log).OnEventf("change state: %s -> %s", sm.State.String(), nextState.String())
 	}
 	sm.State = nextState
 }

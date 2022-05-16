@@ -53,9 +53,9 @@ type session struct {
 	hasStopByDisconnect    bool
 }
 
-func (s *session) SetLog(logger Log) {
-	s.log = logger
-	s.stateMachine.logger = &s.log
+func (s *session) SetLog(log Log) {
+	s.log = log
+	s.stateMachine.log = &s.log
 }
 
 func (s *session) logError(err error) {

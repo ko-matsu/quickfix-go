@@ -4,27 +4,22 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"go.uber.org/atomic"
 )
 
 type EventTimer struct {
-	f        func()
-	timer    *time.Timer
-	done     chan struct{}
-	wg       sync.WaitGroup
-	rst      chan time.Duration
-	rstLock  sync.Mutex
-	isClosed *atomic.Bool
+	f     func()
+	timer *time.Timer
+	done  chan struct{}
+	wg    sync.WaitGroup
+	rst   chan time.Duration
 }
 
 func NewEventTimer(task func()) *EventTimer {
 	t := &EventTimer{
-		f:        task,
-		timer:    newStoppedTimer(),
-		done:     make(chan struct{}),
-		rst:      make(chan time.Duration),
-		isClosed: atomic.NewBool(false),
+		f:     task,
+		timer: newStoppedTimer(),
+		done:  make(chan struct{}),
+		rst:   make(chan time.Duration),
 	}
 
 	t.wg.Add(1)
@@ -65,7 +60,6 @@ func (t *EventTimer) Stop() {
 	}
 
 	fmt.Printf("EventTimer.Stop start\n")
-	t.isClosed.Store(true)
 	close(t.done)
 
 	fmt.Printf("EventTimer.Stop waiting\n")
@@ -79,19 +73,12 @@ func (t *EventTimer) Reset(timeout time.Duration) {
 	}
 
 	go func() {
-		if !t.rstLock.TryLock() {
-			fmt.Println("EventTimer.Reset already locked")
-			return
+		fmt.Printf("EventTimer.Reset(%d)\n", timeout)
+		select {
+		case <-t.done:
+		case t.rst <- timeout:
 		}
-		defer t.rstLock.Unlock()
-		if !t.isClosed.Load() {
-			fmt.Printf("EventTimer.Reset(%d)\n", timeout)
-			select {
-			case <-t.done:
-			case t.rst <- timeout:
-			}
-			fmt.Printf("EventTimer.Reset(%d) send\n", timeout)
-		}
+		fmt.Printf("EventTimer.Reset(%d) send\n", timeout)
 	}()
 }
 

@@ -76,9 +76,10 @@ func (t *EventTimer) Reset(timeout time.Duration) {
 		fmt.Printf("EventTimer.Reset(%d)\n", timeout)
 		select {
 		case <-t.done:
+			fmt.Printf("EventTimer.Reset(%d) cancel\n", timeout)
 		case t.rst <- timeout:
+			fmt.Printf("EventTimer.Reset(%d) send\n", timeout)
 		}
-		fmt.Printf("EventTimer.Reset(%d) send\n", timeout)
 	}()
 }
 

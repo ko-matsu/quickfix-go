@@ -757,19 +757,13 @@ func (s *session) run() {
 	s.stateTimer = internal.NewEventTimer(func() {
 		select {
 		case <-done:
-		default:
-			go func() {
-				s.sessionEvent <- internal.NeedHeartbeat
-			}()
+		case s.sessionEvent <- internal.NeedHeartbeat:
 		}
 	})
 	s.peerTimer = internal.NewEventTimer(func() {
 		select {
 		case <-done:
-		default:
-			go func() {
-				s.sessionEvent <- internal.PeerTimeout
-			}()
+		case s.sessionEvent <- internal.PeerTimeout:
 		}
 	})
 	ticker := time.NewTicker(time.Second)

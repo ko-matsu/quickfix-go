@@ -83,8 +83,6 @@ func (t *EventTimer) Reset(timeout time.Duration) {
 			fmt.Println("EventTimer.Reset already locked")
 			return
 		}
-
-		t.rstLock.Lock()
 		defer t.rstLock.Unlock()
 		if !t.isClosed.Load() {
 			fmt.Printf("EventTimer.Reset(%d)\n", timeout)

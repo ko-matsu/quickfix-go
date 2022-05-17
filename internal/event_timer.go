@@ -10,6 +10,7 @@ type EventTimer struct {
 	timer *time.Timer
 	done  chan struct{}
 	wg    sync.WaitGroup
+	rst   chan time.Duration
 }
 
 func NewEventTimer(task func()) *EventTimer {
@@ -17,6 +18,7 @@ func NewEventTimer(task func()) *EventTimer {
 		f:     task,
 		timer: newStoppedTimer(),
 		done:  make(chan struct{}),
+		rst:   make(chan time.Duration),
 	}
 
 	t.wg.Add(1)
@@ -33,6 +35,14 @@ func NewEventTimer(task func()) *EventTimer {
 				t.timer.Stop()
 				return
 
+			case rstTime := <-t.rst:
+				if !t.timer.Stop() {
+					select { // cleanup
+					case <-t.timer.C:
+					default:
+					}
+				}
+				t.timer.Reset(rstTime)
 			}
 		}
 	}()
@@ -54,7 +64,12 @@ func (t *EventTimer) Reset(timeout time.Duration) {
 		return
 	}
 
-	t.timer.Reset(timeout)
+	go func() {
+		select {
+		case <-t.done:
+		case t.rst <- timeout:
+		}
+	}()
 }
 
 func newStoppedTimer() *time.Timer {

@@ -9,6 +9,7 @@ import (
 	"net"
 	"runtime/debug"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -323,6 +324,7 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 	if a.connectionValidator != nil {
 		if err := a.connectionValidator.Validate(netConn, sessID); err != nil {
 			a.globalLog.OnEventf("Unable to validate a connection %v", err.Error())
+			a.globalLog.OnEventf("failed incoming message: %s", strings.ReplaceAll(msgBytes.String(), "\u0001", "|"))
 			return
 		}
 	}
@@ -341,6 +343,7 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 		dynamicSession, err := a.sessionFactory.createSession(sessID, a.storeFactory, a.settings.globalSettings.clone(), a.logFactory, a.app)
 		if err != nil {
 			a.globalLog.OnEventf("Dynamic session %v failed to create: %v", sessID, err)
+			a.globalLog.OnEventf("failed incoming message: %s", strings.ReplaceAll(msgBytes.String(), "\u0001", "|"))
 			return
 		}
 		dynamicSession.linkedAcceptor = a
@@ -357,6 +360,7 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 
 	if err := session.connect(msgIn, msgOut); err != nil {
 		a.globalLog.OnEventf("Unable to accept %v", err.Error())
+		a.globalLog.OnEventf("failed incoming message: %s", strings.ReplaceAll(msgBytes.String(), "\u0001", "|"))
 		return
 	}
 	a.sessionAddr.Store(sessID, netConn.RemoteAddr())

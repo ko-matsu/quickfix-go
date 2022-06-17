@@ -12,7 +12,8 @@ func (s pendingTimeout) Timeout(session *session, event internal.Event) (nextSta
 		session.log.OnEvent("Session Timeout")
 		return latentState{}
 	default:
-		session.log.OnEventf("receive event: %s, %v", s.String(), event)
+		session.log.OnEventParams("receive event",
+			LogString("sessionState", s.String()), LogObject("event", event))
 	}
 
 	return s

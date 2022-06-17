@@ -10,7 +10,7 @@ func writeLoop(connection io.Writer, messageOut chan []byte, log Log) {
 		}
 
 		if _, err := connection.Write(msg); err != nil {
-			log.OnEvent(err.Error())
+			log.OnErrorEvent("connection Write failed", err)
 		}
 	}
 }

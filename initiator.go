@@ -150,7 +150,7 @@ func (i *Initiator) handleConnection(session *session, tlsConfig *tls.Config, di
 
 		netConn, err := dialer.Dial("tcp", address)
 		if err != nil {
-			session.log.OnEventf("Failed to connect: %v", err)
+			session.log.OnErrorEvent("Failed to connect", err)
 			goto reconnect
 		} else if tlsConfig != nil {
 			// Unless InsecureSkipVerify is true, server name config is required for TLS
@@ -164,7 +164,7 @@ func (i *Initiator) handleConnection(session *session, tlsConfig *tls.Config, di
 			}
 			tlsConn := tls.Client(netConn, tlsConfig)
 			if err = tlsConn.Handshake(); err != nil {
-				session.log.OnEventf("Failed handshake: %v", err)
+				session.log.OnErrorEvent("Failed handshake", err)
 				goto reconnect
 			}
 			netConn = tlsConn
@@ -173,7 +173,7 @@ func (i *Initiator) handleConnection(session *session, tlsConfig *tls.Config, di
 		msgIn = make(chan fixIn)
 		msgOut = make(chan []byte)
 		if err := session.connect(msgIn, msgOut); err != nil {
-			session.log.OnEventf("Failed to initiate: %v", err)
+			session.log.OnErrorEvent("Failed to initiate", err)
 			goto reconnect
 		}
 
@@ -182,7 +182,7 @@ func (i *Initiator) handleConnection(session *session, tlsConfig *tls.Config, di
 		go func() {
 			writeLoop(netConn, msgOut, session.log)
 			if err := netConn.Close(); err != nil {
-				session.log.OnEvent(err.Error())
+				session.log.OnErrorEvent("connection Close failed", err)
 			}
 			close(disconnected)
 		}()

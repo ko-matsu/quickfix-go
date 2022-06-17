@@ -31,13 +31,13 @@ func (sm *stateMachine) Connect(session *session) {
 
 	if session.RefreshOnLogon {
 		if err := session.store.Refresh(); err != nil {
-			session.logError(err)
+			session.logError("store.Refresh failed", err)
 			return
 		}
 	}
 	session.log.OnEvent("Sending logon request")
 	if err := session.sendLogon(); err != nil {
-		session.logError(err)
+		session.logError("sendLogon failed", err)
 		return
 	}
 
@@ -72,7 +72,8 @@ func (sm *stateMachine) Incoming(session *session, m fixIn) {
 
 	msg := session.messagePool.Get()
 	if err := ParseMessageWithDataDictionary(msg, m.bytes, session.transportDataDictionary, session.appDataDictionary); err != nil {
-		session.log.OnEventf("Msg Parse Error: %v, %q", err.Error(), m.bytes)
+		session.log.OnErrorEventParams("Msg Parse Error", err,
+			LogStringWithSingleQuote("fixInMsg", m.bytes.String()))
 	} else {
 		msg.ReceiveTime = m.receiveTime
 		sm.fixMsgIn(session, msg)
@@ -131,7 +132,7 @@ func (sm *stateMachine) CheckSessionTime(session *session, now time.Time) {
 		session.log.OnEvent("Session reset")
 		sm.State.ShutdownNow(session)
 		if err := session.dropAndReset(); err != nil {
-			session.logError(err)
+			session.logError("dropAndReset failed", err)
 		}
 		sm.setState(session, latentState{})
 	}
@@ -154,7 +155,8 @@ func (sm *stateMachine) setState(session *session, nextState sessionState) {
 	}
 
 	if sm.State.String() != nextState.String() && sm.log != nil {
-		(*sm.log).OnEventf("change state: %s -> %s", sm.State.String(), nextState.String())
+		(*sm.log).OnEventParams("change state",
+			LogString("currentState", sm.State.String()), LogString("nextState", nextState.String()))
 	}
 	sm.State = nextState
 }
@@ -207,7 +209,7 @@ func (sm *stateMachine) IsSessionTime() bool {
 }
 
 func handleStateError(s *session, err error) sessionState {
-	s.logError(err)
+	s.logError("session state error", err)
 	return latentState{}
 }
 
@@ -259,7 +261,7 @@ type loggedOn struct{ connected }
 func (loggedOn) IsLoggedOn() bool { return true }
 func (loggedOn) ShutdownNow(s *session) {
 	if err := s.sendLogout(""); err != nil {
-		s.logError(err)
+		s.logError("sendLogout failed", err)
 	}
 }
 

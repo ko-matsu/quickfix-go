@@ -29,23 +29,31 @@ func (l screenLog) OnEventf(format string, a ...interface{}) {
 }
 
 func (l screenLog) OnErrorEvent(message string, err error) {
-	l.OnEventf("%s, %+v", message, err)
+	l.OnEventf("%s: %+v", message, err)
 }
 
 func (l screenLog) OnEventParams(message string, v ...LogParam) {
 	var str string
-	for _, val := range v {
-		str += ", " + val.String()
+	for i, val := range v {
+		if i == 0 {
+			str += ": " + val.String()
+		} else {
+			str += ", " + val.String()
+		}
 	}
 	l.OnEventf("%s%s", message, str)
 }
 
 func (l screenLog) OnErrorEventParams(message string, err error, v ...LogParam) {
 	var str string
-	for _, val := range v {
-		str += ", " + val.String()
+	for i, val := range v {
+		if i == 0 {
+			str += ": " + val.String()
+		} else {
+			str += ", " + val.String()
+		}
 	}
-	l.OnEventf("%s, %+v, %s", message, err, str)
+	l.OnEventf("%s, %+v%s", message, err, str)
 }
 
 type screenLogFactory struct{}

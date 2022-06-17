@@ -1,7 +1,6 @@
 package quickfix
 
 import (
-	"bytes"
 	"fmt"
 )
 
@@ -10,10 +9,6 @@ const (
 	LogOutgoingMessage string = "FIX outgoing"
 	LogPrefixGlobal    string = "GLOBAL"
 )
-
-func makeReadable(s []byte) string {
-	return string(bytes.Replace(s, []byte("\x01"), []byte("|"), -1))
-}
 
 type customLog struct {
 	sessionPrefix string

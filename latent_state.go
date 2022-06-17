@@ -14,7 +14,7 @@ func (state latentState) FixMsgIn(session *session, msg *Message) (nextState ses
 }
 
 func (state latentState) Timeout(session *session, event internal.Event) (nextState sessionState) {
-	session.log.OnEventf("receive event: %s, %v", state.String(), event)
+	session.log.OnEventParams("receive event", LogString("sessionState", state.String()), LogObject("event", event))
 	return state
 }
 

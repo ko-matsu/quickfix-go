@@ -67,7 +67,8 @@ func (state inSession) Timeout(session *session, event internal.Event) (nextStat
 		session.peerTimer.Reset(time.Duration(float64(1.2) * float64(session.HeartBtInt)))
 		return pendingTimeout{state}
 	default:
-		session.log.OnEventf("receive event: %s, %v", state.String(), event)
+		session.log.OnEventParams("receive event",
+			LogString("sessionState", state.String()), LogObject("event", event))
 	}
 
 	return state
@@ -83,19 +84,19 @@ func (state inSession) handleLogout(session *session, msg *Message) (nextState s
 		session.log.OnEvent("Sending logout response")
 
 		if err := session.sendLogoutInReplyTo("", msg); err != nil {
-			session.logError(err)
+			session.logError("sendLogoutInReplyTo failed", err)
 		}
 	} else {
 		session.log.OnEvent("Received logout response")
 	}
 
 	if err := session.store.IncrNextTargetMsgSeqNum(); err != nil {
-		session.logError(err)
+		session.logError("logout increment MsgSeqNum failed", err)
 	}
 
 	if session.ResetOnLogout {
 		if err := session.dropAndReset(); err != nil {
-			session.logError(err)
+			session.logError("logout Reset failed", err)
 		}
 	}
 
@@ -211,7 +212,7 @@ func (state inSession) resendMessages(session *session, beginSeqNo, endSeqNo int
 
 	msgs, err := session.store.GetMessages(beginSeqNo, endSeqNo)
 	if err != nil {
-		session.log.OnEventf("error retrieving messages from store: %s", err.Error())
+		session.log.OnErrorEvent("error retrieving messages from store", err)
 		return
 	}
 

@@ -62,12 +62,12 @@ func shutdownWithReason(session *session, msg *Message, incrNextTargetMsgSeqNum 
 	logout := session.buildLogout(reason)
 
 	if err := session.dropAndSendInReplyTo(logout, msg); err != nil {
-		session.logError(err)
+		session.logError("dropAndSendInReplyTo fail", err)
 	}
 
 	if incrNextTargetMsgSeqNum {
 		if err := session.store.IncrNextTargetMsgSeqNum(); err != nil {
-			session.logError(err)
+			session.logError("increment nextTargetMsgSeqNum failed", err)
 		}
 	}
 

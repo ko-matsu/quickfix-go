@@ -9,7 +9,6 @@ import (
 	"net"
 	"runtime/debug"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -224,7 +223,7 @@ func (a *Acceptor) listenForConnections(listener net.Listener) {
 }
 
 func (a *Acceptor) invalidMessage(msg *bytes.Buffer, err error) {
-	a.globalLog.OnEventf("Invalid Message: %s, %v", msg.Bytes(), err.Error())
+	a.globalLog.OnErrorEventParams("Invalid Message", err, LogString("recvMsgBytes", msg.String()))
 }
 
 func (a *Acceptor) handleConnection(netConn net.Conn) {
@@ -234,7 +233,7 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 		}
 
 		if err := netConn.Close(); err != nil {
-			a.globalLog.OnEvent(err.Error())
+			a.globalLog.OnErrorEvent("connection Close failed", err)
 		}
 	}()
 
@@ -246,7 +245,7 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 		if err == io.EOF {
 			a.globalLog.OnEvent("Connection Terminated")
 		} else {
-			a.globalLog.OnEvent(err.Error())
+			a.globalLog.OnErrorEvent("failed to ReadMessage", err)
 		}
 		return
 	}
@@ -316,15 +315,16 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 	localConnectionPort := netConn.LocalAddr().(*net.TCPAddr).Port
 	if expectedPort, ok := a.sessionHostPort[sessID]; ok && expectedPort != localConnectionPort {
 		// If it is not included in sessionHostPort, we will check if it is included in sessions in a later process.
-		a.globalLog.OnEventf("Session %v not found for incoming message: %s", sessID, msgBytes)
+		a.globalLog.OnErrorEventParams("Session not found for incoming message", nil,
+			LogString("sessionID", sessID.String()), LogMessage("incomingMessage", msgBytes.Bytes()))
 		return
 	}
 
 	// We have a session ID and a network connection. This seems to be a good place for any custom authentication logic.
 	if a.connectionValidator != nil {
 		if err := a.connectionValidator.Validate(netConn, sessID); err != nil {
-			a.globalLog.OnEventf("Unable to validate a connection %v", err.Error())
-			a.globalLog.OnEventf("failed incoming message: %s", strings.ReplaceAll(msgBytes.String(), "\u0001", "|"))
+			a.globalLog.OnErrorEventParams("Unable to validate a connection", err,
+				LogString("sessionID", sessID.String()), LogMessage("incomingMessage", msgBytes.Bytes()))
 			return
 		}
 	}
@@ -337,13 +337,14 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 	session, ok := a.sessions[sessID]
 	if !ok {
 		if !a.dynamicSessions {
-			a.globalLog.OnEventf("Session %v not found for incoming message: %s", sessID, msgBytes)
+			a.globalLog.OnErrorEventParams("Session not found for incoming message", nil,
+				LogString("sessionID", sessID.String()), LogMessage("incomingMessage", msgBytes.Bytes()))
 			return
 		}
 		dynamicSession, err := a.sessionFactory.createSession(sessID, a.storeFactory, a.settings.globalSettings.clone(), a.logFactory, a.app)
 		if err != nil {
-			a.globalLog.OnEventf("Dynamic session %v failed to create: %v", sessID, err)
-			a.globalLog.OnEventf("failed incoming message: %s", strings.ReplaceAll(msgBytes.String(), "\u0001", "|"))
+			a.globalLog.OnErrorEventParams("Dynamic session failed to create", err,
+				LogString("sessionID", sessID.String()), LogMessage("incomingMessage", msgBytes.Bytes()))
 			return
 		}
 		dynamicSession.linkedAcceptor = a
@@ -359,8 +360,7 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 	msgOut := make(chan []byte)
 
 	if err := session.connect(msgIn, msgOut); err != nil {
-		a.globalLog.OnEventf("Unable to accept %v", err.Error())
-		a.globalLog.OnEventf("failed incoming message: %s", strings.ReplaceAll(msgBytes.String(), "\u0001", "|"))
+		a.globalLog.OnErrorEventParams("Unable to accept", err, LogMessage("incomingMessage", msgBytes.Bytes()))
 		return
 	}
 	a.sessionAddr.Store(sessID, netConn.RemoteAddr())
@@ -374,7 +374,7 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 
 	if session.hasStopByDisconnect {
 		if tmpErr := netConn.Close(); tmpErr != nil {
-			session.log.OnEventf("net.Close error: %v", tmpErr)
+			session.log.OnErrorEvent("net.Close error", tmpErr)
 		}
 	}
 	session.log.OnEvent("handleConnection finish")
@@ -402,7 +402,8 @@ LOOP:
 				session.run()
 				err := UnregisterSession(session.sessionID)
 				if err != nil {
-					a.globalLog.OnEventf("Unregister dynamic session %v failed: %v", session.sessionID, err)
+					a.globalLog.OnErrorEventParams("Unregister dynamic session failed",
+						err, LogString("sessionID", session.sessionID.String()))
 					return
 				}
 				complete <- sessionID

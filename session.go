@@ -58,8 +58,8 @@ func (s *session) SetLog(log Log) {
 	s.stateMachine.log = &s.log
 }
 
-func (s *session) logError(err error) {
-	s.log.OnEvent(err.Error())
+func (s *session) logError(msg string, err error) {
+	s.log.OnErrorEvent(msg, err)
 }
 
 //TargetDefaultApplicationVersionID returns the default application version ID for messages received by this version.
@@ -118,7 +118,7 @@ func (s *session) fillDefaultHeader(msg *Message, inReplyTo *Message) {
 	if s.EnableLastMsgSeqNumProcessed {
 		if inReplyTo != nil {
 			if lastSeqNum, err := inReplyTo.Header.GetInt(tagMsgSeqNum); err != nil {
-				s.logError(err)
+				s.logError("failed to get seqnum msg", err)
 			} else {
 				msg.Header.SetInt(tagLastMsgSeqNumProcessed, lastSeqNum)
 			}
@@ -464,10 +464,10 @@ func (s *session) initiateLogout(reason string) (err error) {
 
 func (s *session) initiateLogoutInReplyTo(reason string, inReplyTo *Message) (err error) {
 	if err = s.sendLogoutInReplyTo(reason, inReplyTo); err != nil {
-		s.logError(err)
+		s.logError("sendLogoutInReplyTo failed", err)
 		return
 	}
-	s.log.OnEvent("Inititated logout request")
+	s.log.OnEvent("Initiated logout request")
 	time.AfterFunc(s.LogoutTimeout, func() { s.sessionEvent <- internal.LogoutTimeout })
 	return
 }
@@ -662,7 +662,7 @@ func (s *session) doReject(msg *Message, rej MessageRejectError) error {
 		reply.Body.SetField(tagRefSeqNum, seqNum)
 	}
 
-	s.log.OnEventf("Message Rejected: %v", rej.Error())
+	s.log.OnErrorEvent("Message Rejected:", rej)
 	return s.sendInReplyTo(reply, msg)
 }
 
@@ -683,7 +683,7 @@ func (s *session) onDisconnect() {
 	s.log.OnEvent("Disconnected")
 	if s.ResetOnDisconnect {
 		if err := s.dropAndReset(); err != nil {
-			s.logError(err)
+			s.logError("disconnect reset failed", err)
 		}
 	}
 

@@ -31,23 +31,31 @@ func (l fileLog) OnEventf(format string, v ...interface{}) {
 }
 
 func (l fileLog) OnErrorEvent(message string, err error) {
-	l.eventLogger.Printf("%s, %+v", message, err)
+	l.eventLogger.Printf("%s: %+v", message, err)
 }
 
 func (l fileLog) OnEventParams(message string, v ...LogParam) {
 	var str string
-	for _, val := range v {
-		str += ", " + val.String()
+	for i, val := range v {
+		if i == 0 {
+			str += ": " + val.String()
+		} else {
+			str += ", " + val.String()
+		}
 	}
 	l.eventLogger.Printf("%s%s", message, str)
 }
 
 func (l fileLog) OnErrorEventParams(message string, err error, v ...LogParam) {
 	var str string
-	for _, val := range v {
-		str += ", " + val.String()
+	for i, val := range v {
+		if i == 0 {
+			str += ": " + val.String()
+		} else {
+			str += ", " + val.String()
+		}
 	}
-	l.eventLogger.Printf("%s, %+v, %s", message, err, str)
+	l.eventLogger.Printf("%s, %+v%s", message, err, str)
 }
 
 type fileLogFactory struct {

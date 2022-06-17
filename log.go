@@ -1,6 +1,13 @@
 package quickfix
 
-import "fmt"
+import (
+	"bytes"
+	"fmt"
+)
+
+func makeReadable(s []byte) string {
+	return string(bytes.Replace(s, []byte("\x01"), []byte("|"), -1))
+}
 
 type LogParam struct {
 	Name   string
@@ -16,6 +23,8 @@ func (l LogParam) String() string {
 	switch l.format {
 	case "%s":
 		return fmt.Sprintf("%s=%s", l.Name, l.Value)
+	case "%q":
+		return fmt.Sprintf("%s=%q", l.Name, l.Value)
 	case "%d":
 		return fmt.Sprintf("%s=%d", l.Name, l.Value)
 	case "%+v":
@@ -25,11 +34,27 @@ func (l LogParam) String() string {
 	}
 }
 
+func LogMessage(name string, msgBytes []byte) LogParam {
+	return LogParam{
+		Name:   name,
+		Value:  makeReadable(msgBytes),
+		format: "%s",
+	}
+}
+
 func LogString(name, value string) LogParam {
 	return LogParam{
 		Name:   name,
 		Value:  value,
 		format: "%s",
+	}
+}
+
+func LogStringWithSingleQuote(name, value string) LogParam {
+	return LogParam{
+		Name:   name,
+		Value:  value,
+		format: "%q",
 	}
 }
 

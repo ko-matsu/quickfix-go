@@ -5,50 +5,73 @@ import (
 	"fmt"
 )
 
+const (
+	LogIncomingMessage string = "FIX incoming"
+	LogOutgoingMessage string = "FIX outgoing"
+	LogPrefixGlobal    string = "GLOBAL"
+)
+
 func makeReadable(s []byte) string {
 	return string(bytes.Replace(s, []byte("\x01"), []byte("|"), -1))
 }
 
 type customLog struct {
 	sessionPrefix string
-	logFunc       func(msg string, keysAndValues ...interface{})
+	logFunc       func(prefix, msg string, keysAndValues ...LogParam)
+	logErrorFunc  func(prefix, msg string, err error, keysAndValues ...LogParam)
 }
 
 func (l customLog) OnIncoming(s []byte) {
-	msg := fmt.Sprintf("FIX incoming [%v |%v]", l.sessionPrefix, makeReadable(s))
-	l.logFunc(msg)
+	l.logFunc(l.sessionPrefix, LogIncomingMessage, LogString("incomingMessage", makeReadable(s)))
 }
 
 func (l customLog) OnOutgoing(s []byte) {
-	msg := fmt.Sprintf("FIX outgoing [%v - |%v]", l.sessionPrefix, makeReadable(s))
-	l.logFunc(msg)
+	l.logFunc(l.sessionPrefix, LogOutgoingMessage, LogString("outgoingMessage", makeReadable(s)))
 }
 
 func (l customLog) OnEvent(s string) {
-	msg := fmt.Sprintf("FIX event [%v - %v]", l.sessionPrefix, s)
-	l.logFunc(msg)
+	l.logFunc(l.sessionPrefix, s)
 }
 
 func (l customLog) OnEventf(format string, a ...interface{}) {
 	l.OnEvent(fmt.Sprintf(format, a...))
 }
 
+func (l customLog) OnErrorEvent(message string, err error) {
+	l.logErrorFunc(l.sessionPrefix, message, err)
+}
+
+func (l customLog) OnEventParams(message string, v ...LogParam) {
+	l.logFunc(l.sessionPrefix, message, v...)
+}
+
+func (l customLog) OnErrorEventParams(message string, err error, v ...LogParam) {
+	l.logErrorFunc(l.sessionPrefix, message, err, v...)
+}
+
 type customLogFactory struct {
-	logFunc func(msg string, keysAndValues ...interface{})
+	logFunc      func(prefix, msg string, keysAndValues ...LogParam)
+	logErrorFunc func(prefix, msg string, err error, keysAndValues ...LogParam)
 }
 
 func (f customLogFactory) Create() (Log, error) {
-	log := customLog{"GLOBAL", f.logFunc}
+	log := customLog{LogPrefixGlobal, f.logFunc, f.logErrorFunc}
 	return log, nil
 }
 
 func (f customLogFactory) CreateSessionLog(sessionID SessionID) (Log, error) {
-	log := customLog{sessionID.String(), f.logFunc}
+	log := customLog{sessionID.String(), f.logFunc, f.logErrorFunc}
 	return log, nil
 }
 
 // NewCustomLogFactory creates an instance of LogFactory that
 // logs messages and events using the provided log function
-func NewCustomLogFactory(logFunc func(msg string, keysAndValues ...interface{})) LogFactory {
-	return customLogFactory{logFunc: logFunc}
+func NewCustomLogFactory(
+	logFunc func(prefix, msg string, keysAndValues ...LogParam),
+	logErrorFunc func(prefix, msg string, err error, keysAndValues ...LogParam),
+) LogFactory {
+	return customLogFactory{
+		logFunc:      logFunc,
+		logErrorFunc: logErrorFunc,
+	}
 }

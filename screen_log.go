@@ -28,6 +28,26 @@ func (l screenLog) OnEventf(format string, a ...interface{}) {
 	l.OnEvent(fmt.Sprintf(format, a...))
 }
 
+func (l screenLog) OnErrorEvent(message string, err error) {
+	l.OnEventf("%s, %+v", message, err)
+}
+
+func (l screenLog) OnEventParams(message string, v ...LogParam) {
+	var str string
+	for _, val := range v {
+		str += ", " + val.String()
+	}
+	l.OnEventf("%s%s", message, str)
+}
+
+func (l screenLog) OnErrorEventParams(message string, err error, v ...LogParam) {
+	var str string
+	for _, val := range v {
+		str += ", " + val.String()
+	}
+	l.OnEventf("%s, %+v, %s", message, err, str)
+}
+
 type screenLogFactory struct{}
 
 func (screenLogFactory) Create() (Log, error) {

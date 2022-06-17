@@ -1,5 +1,70 @@
 package quickfix
 
+import "fmt"
+
+type LogParam struct {
+	Name   string
+	Value  interface{}
+	format string
+}
+
+func (l LogParam) GetFormat() string {
+	return l.format
+}
+
+func (l LogParam) String() string {
+	switch l.format {
+	case "%s":
+		return fmt.Sprintf("%s=%s", l.Name, l.Value)
+	case "%d":
+		return fmt.Sprintf("%s=%d", l.Name, l.Value)
+	case "%+v":
+		return fmt.Sprintf("%s=%+v", l.Name, l.Value)
+	default:
+		return fmt.Sprintf("%s=%v", l.Name, l.Value)
+	}
+}
+
+func LogString(name, value string) LogParam {
+	return LogParam{
+		Name:   name,
+		Value:  value,
+		format: "%s",
+	}
+}
+
+func LogInt(name string, value int) LogParam {
+	return LogParam{
+		Name:   name,
+		Value:  value,
+		format: "%d",
+	}
+}
+
+func LogInt64(name string, value int64) LogParam {
+	return LogParam{
+		Name:   name,
+		Value:  value,
+		format: "%d",
+	}
+}
+
+func LogUint64(name string, value uint64) LogParam {
+	return LogParam{
+		Name:   name,
+		Value:  value,
+		format: "%d",
+	}
+}
+
+func LogObject(name string, value interface{}) LogParam {
+	return LogParam{
+		Name:   name,
+		Value:  value,
+		format: "%v",
+	}
+}
+
 //Log is a generic interface for logging FIX messages and events.
 type Log interface {
 	//log incoming fix message
@@ -13,6 +78,15 @@ type Log interface {
 
 	//log fix event according to format specifier
 	OnEventf(string, ...interface{})
+
+	//log fix error event
+	OnErrorEvent(string, error)
+
+	//log fix event according to logging parameter
+	OnEventParams(string, ...LogParam)
+
+	//log fix error event according to logging parameter
+	OnErrorEventParams(string, error, ...LogParam)
 }
 
 //The LogFactory interface creates global and session specific Log instances

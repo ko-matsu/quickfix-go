@@ -70,7 +70,7 @@ func (sm *stateMachine) Incoming(session *session, m fixIn) {
 
 	session.log.OnIncoming(m.bytes.Bytes())
 
-	msg := session.messagePool.Get()
+	msg := NewMessage()
 	if err := ParseMessageWithDataDictionary(msg, m.bytes, session.transportDataDictionary, session.appDataDictionary); err != nil {
 		session.log.OnErrorEventParams("Msg Parse Error", err,
 			LogStringWithSingleQuote("fixInMsg", m.bytes.String()))
@@ -79,9 +79,6 @@ func (sm *stateMachine) Incoming(session *session, m fixIn) {
 		sm.fixMsgIn(session, msg)
 	}
 
-	if !msg.keepMessage {
-		session.returnToPool(msg)
-	}
 	session.peerTimer.Reset(time.Duration(float64(1.2) * float64(session.HeartBtInt)))
 }
 

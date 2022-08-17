@@ -1,5 +1,5 @@
 service:
-  golangci-lint-version: 1.46.0
+  golangci-lint-version: 1.48.0
 run:
   deadline: 30m
   skip-dirs:

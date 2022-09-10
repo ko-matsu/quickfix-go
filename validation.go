@@ -12,8 +12,8 @@ type validatorSettings struct {
 	CheckFieldsOutOfOrder bool
 }
 
-//Default configuration for message validation.
-//See http://www.quickfixengine.org/quickfix/doc/html/configuration.html.
+// Default configuration for message validation.
+// See http://www.quickfixengine.org/quickfix/doc/html/configuration.html.
 var defaultValidatorSettings = validatorSettings{
 	CheckFieldsOutOfOrder: true,
 }
@@ -29,7 +29,7 @@ type fixtValidator struct {
 	settings                validatorSettings
 }
 
-//Validate tests the message against the provided data dictionary.
+// Validate tests the message against the provided data dictionary.
 func (v *fixValidator) Validate(msg *Message) MessageRejectError {
 	if !msg.Header.Has(tagMsgType) {
 		return RequiredTagMissing(tagMsgType)
@@ -42,8 +42,8 @@ func (v *fixValidator) Validate(msg *Message) MessageRejectError {
 	return validateFIX(v.dataDictionary, v.settings, msgType, msg)
 }
 
-//Validate tests the message against the provided transport and app data dictionaries.
-//If the message is an admin message, it will be validated against the transport data dictionary.
+// Validate tests the message against the provided transport and app data dictionaries.
+// If the message is an admin message, it will be validated against the transport data dictionary.
 func (v *fixtValidator) Validate(msg *Message) MessageRejectError {
 	if !msg.Header.Has(tagMsgType) {
 		return RequiredTagMissing(tagMsgType)

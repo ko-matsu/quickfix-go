@@ -15,18 +15,18 @@ on:
 jobs:
   golangci:
     name: lint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3
         with:
           version: v1.48.0
           args: --timeout=10m --skip-dirs=fix42,fix44 --exclude="Error return value of .(store.cache.*|suite.msgStore.*). is not checke"
 
   build:
     name: build
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         go: [1.16.x, 1.18.x]
@@ -42,15 +42,32 @@ jobs:
 #          - FIX_TEST=fix50sp2
     steps:
       - name: Setup
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go }}
       - name: Check out source
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: mod download
+        run: go mod download
+
       - name: Run Mongo
-        run: docker run -d -p 27017:27017 mongo
+        run: docker compose up -d mongo
+
       - name: Test
         env:
           GO111MODULE: "on"
-          MONGODB_TEST_CXN: "localhost"
+          MONGODB_TEST_CXN: "mongodb://localhost:27017/"
         run: make generate; if [ -z "$FIX_TEST" ]; then make build; make; else make build_accept; make $FIX_TEST; fi
+
+      - name: after test
+        if: always()
+        run: docker compose down

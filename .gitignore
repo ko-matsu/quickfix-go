@@ -6,3 +6,4 @@ _test/test
 _test/echo_server
 _test/tmp
 _vendor*
+.idea/

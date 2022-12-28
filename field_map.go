@@ -223,6 +223,13 @@ func (m *FieldMap) Clear() {
 	}
 }
 
+// DeleteTag removes a tag's value from field map, if present
+func (m *FieldMap) DeleteTag(tag Tag) {
+	m.rwLock.Lock()
+	defer m.rwLock.Unlock()
+	delete(m.tagLookup, tag)
+}
+
 // CopyInto overwrites the given FieldMap with this one
 func (m *FieldMap) CopyInto(to *FieldMap) {
 	m.rwLock.RLock()

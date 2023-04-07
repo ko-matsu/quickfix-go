@@ -412,7 +412,8 @@ type NoPartySubIDsRepeatingGroup struct {
 func NewNoPartySubIDsRepeatingGroup() NoPartySubIDsRepeatingGroup {
 	return NoPartySubIDsRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoPartySubIDs,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.PartySubID), quickfix.GroupElement(tag.PartySubIDType)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.PartySubID), quickfix.GroupElement(tag.PartySubIDType)}),
+	}
 }
 
 // Add create and append a new NoPartySubIDs to this group
@@ -435,7 +436,8 @@ type NoPartyIDsRepeatingGroup struct {
 func NewNoPartyIDsRepeatingGroup() NoPartyIDsRepeatingGroup {
 	return NoPartyIDsRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoPartyIDs,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.PartyID), quickfix.GroupElement(tag.PartyIDSource), quickfix.GroupElement(tag.PartyRole), NewNoPartySubIDsRepeatingGroup()})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.PartyID), quickfix.GroupElement(tag.PartyIDSource), quickfix.GroupElement(tag.PartyRole), NewNoPartySubIDsRepeatingGroup()}),
+	}
 }
 
 // Add create and append a new NoPartyIDs to this group
@@ -735,7 +737,8 @@ type NoNestedPartySubIDsRepeatingGroup struct {
 func NewNoNestedPartySubIDsRepeatingGroup() NoNestedPartySubIDsRepeatingGroup {
 	return NoNestedPartySubIDsRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoNestedPartySubIDs,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.NestedPartySubID), quickfix.GroupElement(tag.NestedPartySubIDType)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.NestedPartySubID), quickfix.GroupElement(tag.NestedPartySubIDType)}),
+	}
 }
 
 // Add create and append a new NoNestedPartySubIDs to this group
@@ -758,7 +761,8 @@ type NoNestedPartyIDsRepeatingGroup struct {
 func NewNoNestedPartyIDsRepeatingGroup() NoNestedPartyIDsRepeatingGroup {
 	return NoNestedPartyIDsRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoNestedPartyIDs,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.NestedPartyID), quickfix.GroupElement(tag.NestedPartyIDSource), quickfix.GroupElement(tag.NestedPartyRole), NewNoNestedPartySubIDsRepeatingGroup()})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.NestedPartyID), quickfix.GroupElement(tag.NestedPartyIDSource), quickfix.GroupElement(tag.NestedPartyRole), NewNoNestedPartySubIDsRepeatingGroup()}),
+	}
 }
 
 // Add create and append a new NoNestedPartyIDs to this group
@@ -781,7 +785,8 @@ type NoRegistDtlsRepeatingGroup struct {
 func NewNoRegistDtlsRepeatingGroup() NoRegistDtlsRepeatingGroup {
 	return NoRegistDtlsRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoRegistDtls,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.RegistDtls), quickfix.GroupElement(tag.RegistEmail), quickfix.GroupElement(tag.MailingDtls), quickfix.GroupElement(tag.MailingInst), NewNoNestedPartyIDsRepeatingGroup(), quickfix.GroupElement(tag.OwnerType), quickfix.GroupElement(tag.DateOfBirth), quickfix.GroupElement(tag.InvestorCountryOfResidence)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.RegistDtls), quickfix.GroupElement(tag.RegistEmail), quickfix.GroupElement(tag.MailingDtls), quickfix.GroupElement(tag.MailingInst), NewNoNestedPartyIDsRepeatingGroup(), quickfix.GroupElement(tag.OwnerType), quickfix.GroupElement(tag.DateOfBirth), quickfix.GroupElement(tag.InvestorCountryOfResidence)}),
+	}
 }
 
 // Add create and append a new NoRegistDtls to this group
@@ -961,7 +966,8 @@ type NoDistribInstsRepeatingGroup struct {
 func NewNoDistribInstsRepeatingGroup() NoDistribInstsRepeatingGroup {
 	return NoDistribInstsRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoDistribInsts,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.DistribPaymentMethod), quickfix.GroupElement(tag.DistribPercentage), quickfix.GroupElement(tag.CashDistribCurr), quickfix.GroupElement(tag.CashDistribAgentName), quickfix.GroupElement(tag.CashDistribAgentCode), quickfix.GroupElement(tag.CashDistribAgentAcctNumber), quickfix.GroupElement(tag.CashDistribPayRef), quickfix.GroupElement(tag.CashDistribAgentAcctName)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.DistribPaymentMethod), quickfix.GroupElement(tag.DistribPercentage), quickfix.GroupElement(tag.CashDistribCurr), quickfix.GroupElement(tag.CashDistribAgentName), quickfix.GroupElement(tag.CashDistribAgentCode), quickfix.GroupElement(tag.CashDistribAgentAcctNumber), quickfix.GroupElement(tag.CashDistribPayRef), quickfix.GroupElement(tag.CashDistribAgentAcctName)}),
+	}
 }
 
 // Add create and append a new NoDistribInsts to this group

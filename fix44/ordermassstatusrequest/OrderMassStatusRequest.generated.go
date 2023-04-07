@@ -2003,7 +2003,8 @@ type NoPartySubIDsRepeatingGroup struct {
 func NewNoPartySubIDsRepeatingGroup() NoPartySubIDsRepeatingGroup {
 	return NoPartySubIDsRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoPartySubIDs,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.PartySubID), quickfix.GroupElement(tag.PartySubIDType)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.PartySubID), quickfix.GroupElement(tag.PartySubIDType)}),
+	}
 }
 
 // Add create and append a new NoPartySubIDs to this group
@@ -2026,7 +2027,8 @@ type NoPartyIDsRepeatingGroup struct {
 func NewNoPartyIDsRepeatingGroup() NoPartyIDsRepeatingGroup {
 	return NoPartyIDsRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoPartyIDs,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.PartyID), quickfix.GroupElement(tag.PartyIDSource), quickfix.GroupElement(tag.PartyRole), NewNoPartySubIDsRepeatingGroup()})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.PartyID), quickfix.GroupElement(tag.PartyIDSource), quickfix.GroupElement(tag.PartyRole), NewNoPartySubIDsRepeatingGroup()}),
+	}
 }
 
 // Add create and append a new NoPartyIDs to this group
@@ -2092,7 +2094,8 @@ type NoSecurityAltIDRepeatingGroup struct {
 func NewNoSecurityAltIDRepeatingGroup() NoSecurityAltIDRepeatingGroup {
 	return NoSecurityAltIDRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoSecurityAltID,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.SecurityAltID), quickfix.GroupElement(tag.SecurityAltIDSource)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.SecurityAltID), quickfix.GroupElement(tag.SecurityAltIDSource)}),
+	}
 }
 
 // Add create and append a new NoSecurityAltID to this group
@@ -2158,7 +2161,8 @@ type NoUnderlyingSecurityAltIDRepeatingGroup struct {
 func NewNoUnderlyingSecurityAltIDRepeatingGroup() NoUnderlyingSecurityAltIDRepeatingGroup {
 	return NoUnderlyingSecurityAltIDRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoUnderlyingSecurityAltID,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.UnderlyingSecurityAltID), quickfix.GroupElement(tag.UnderlyingSecurityAltIDSource)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.UnderlyingSecurityAltID), quickfix.GroupElement(tag.UnderlyingSecurityAltIDSource)}),
+	}
 }
 
 // Add create and append a new NoUnderlyingSecurityAltID to this group
@@ -2262,7 +2266,8 @@ type NoEventsRepeatingGroup struct {
 func NewNoEventsRepeatingGroup() NoEventsRepeatingGroup {
 	return NoEventsRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoEvents,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.EventType), quickfix.GroupElement(tag.EventDate), quickfix.GroupElement(tag.EventPx), quickfix.GroupElement(tag.EventText)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.EventType), quickfix.GroupElement(tag.EventDate), quickfix.GroupElement(tag.EventPx), quickfix.GroupElement(tag.EventText)}),
+	}
 }
 
 // Add create and append a new NoEvents to this group
@@ -2328,7 +2333,8 @@ type NoUnderlyingStipsRepeatingGroup struct {
 func NewNoUnderlyingStipsRepeatingGroup() NoUnderlyingStipsRepeatingGroup {
 	return NoUnderlyingStipsRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoUnderlyingStips,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.UnderlyingStipType), quickfix.GroupElement(tag.UnderlyingStipValue)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.UnderlyingStipType), quickfix.GroupElement(tag.UnderlyingStipValue)}),
+	}
 }
 
 // Add create and append a new NoUnderlyingStips to this group

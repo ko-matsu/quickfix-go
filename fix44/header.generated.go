@@ -603,7 +603,8 @@ type NoHopsRepeatingGroup struct {
 func NewNoHopsRepeatingGroup() NoHopsRepeatingGroup {
 	return NoHopsRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoHops,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.HopCompID), quickfix.GroupElement(tag.HopSendingTime), quickfix.GroupElement(tag.HopRefID)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.HopCompID), quickfix.GroupElement(tag.HopSendingTime), quickfix.GroupElement(tag.HopRefID)}),
+	}
 }
 
 // Add create and append a new NoHops to this group

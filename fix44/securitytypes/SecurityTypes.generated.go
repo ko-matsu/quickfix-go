@@ -373,7 +373,8 @@ type NoSecurityTypesRepeatingGroup struct {
 func NewNoSecurityTypesRepeatingGroup() NoSecurityTypesRepeatingGroup {
 	return NoSecurityTypesRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoSecurityTypes,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.SecurityType), quickfix.GroupElement(tag.SecuritySubType), quickfix.GroupElement(tag.Product), quickfix.GroupElement(tag.CFICode)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.SecurityType), quickfix.GroupElement(tag.SecuritySubType), quickfix.GroupElement(tag.Product), quickfix.GroupElement(tag.CFICode)}),
+	}
 }
 
 // Add create and append a new NoSecurityTypes to this group

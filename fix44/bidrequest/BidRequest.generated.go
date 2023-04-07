@@ -834,7 +834,8 @@ type NoBidDescriptorsRepeatingGroup struct {
 func NewNoBidDescriptorsRepeatingGroup() NoBidDescriptorsRepeatingGroup {
 	return NoBidDescriptorsRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoBidDescriptors,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.BidDescriptorType), quickfix.GroupElement(tag.BidDescriptor), quickfix.GroupElement(tag.SideValueInd), quickfix.GroupElement(tag.LiquidityValue), quickfix.GroupElement(tag.LiquidityNumSecurities), quickfix.GroupElement(tag.LiquidityPctLow), quickfix.GroupElement(tag.LiquidityPctHigh), quickfix.GroupElement(tag.EFPTrackingError), quickfix.GroupElement(tag.FairValue), quickfix.GroupElement(tag.OutsideIndexPct), quickfix.GroupElement(tag.ValueOfFutures)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.BidDescriptorType), quickfix.GroupElement(tag.BidDescriptor), quickfix.GroupElement(tag.SideValueInd), quickfix.GroupElement(tag.LiquidityValue), quickfix.GroupElement(tag.LiquidityNumSecurities), quickfix.GroupElement(tag.LiquidityPctLow), quickfix.GroupElement(tag.LiquidityPctHigh), quickfix.GroupElement(tag.EFPTrackingError), quickfix.GroupElement(tag.FairValue), quickfix.GroupElement(tag.OutsideIndexPct), quickfix.GroupElement(tag.ValueOfFutures)}),
+	}
 }
 
 // Add create and append a new NoBidDescriptors to this group
@@ -1033,7 +1034,8 @@ type NoBidComponentsRepeatingGroup struct {
 func NewNoBidComponentsRepeatingGroup() NoBidComponentsRepeatingGroup {
 	return NoBidComponentsRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoBidComponents,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.ListID), quickfix.GroupElement(tag.Side), quickfix.GroupElement(tag.TradingSessionID), quickfix.GroupElement(tag.TradingSessionSubID), quickfix.GroupElement(tag.NetGrossInd), quickfix.GroupElement(tag.SettlType), quickfix.GroupElement(tag.SettlDate), quickfix.GroupElement(tag.Account), quickfix.GroupElement(tag.AcctIDSource)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.ListID), quickfix.GroupElement(tag.Side), quickfix.GroupElement(tag.TradingSessionID), quickfix.GroupElement(tag.TradingSessionSubID), quickfix.GroupElement(tag.NetGrossInd), quickfix.GroupElement(tag.SettlType), quickfix.GroupElement(tag.SettlDate), quickfix.GroupElement(tag.Account), quickfix.GroupElement(tag.AcctIDSource)}),
+	}
 }
 
 // Add create and append a new NoBidComponents to this group

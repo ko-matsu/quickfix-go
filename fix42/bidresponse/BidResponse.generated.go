@@ -410,7 +410,8 @@ type NoBidComponentsRepeatingGroup struct {
 func NewNoBidComponentsRepeatingGroup() NoBidComponentsRepeatingGroup {
 	return NoBidComponentsRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoBidComponents,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.Commission), quickfix.GroupElement(tag.CommType), quickfix.GroupElement(tag.ListID), quickfix.GroupElement(tag.Country), quickfix.GroupElement(tag.Side), quickfix.GroupElement(tag.Price), quickfix.GroupElement(tag.PriceType), quickfix.GroupElement(tag.FairValue), quickfix.GroupElement(tag.NetGrossInd), quickfix.GroupElement(tag.SettlmntTyp), quickfix.GroupElement(tag.FutSettDate), quickfix.GroupElement(tag.TradingSessionID), quickfix.GroupElement(tag.Text), quickfix.GroupElement(tag.EncodedTextLen), quickfix.GroupElement(tag.EncodedText)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.Commission), quickfix.GroupElement(tag.CommType), quickfix.GroupElement(tag.ListID), quickfix.GroupElement(tag.Country), quickfix.GroupElement(tag.Side), quickfix.GroupElement(tag.Price), quickfix.GroupElement(tag.PriceType), quickfix.GroupElement(tag.FairValue), quickfix.GroupElement(tag.NetGrossInd), quickfix.GroupElement(tag.SettlmntTyp), quickfix.GroupElement(tag.FutSettDate), quickfix.GroupElement(tag.TradingSessionID), quickfix.GroupElement(tag.Text), quickfix.GroupElement(tag.EncodedTextLen), quickfix.GroupElement(tag.EncodedText)}),
+	}
 }
 
 // Add create and append a new NoBidComponents to this group

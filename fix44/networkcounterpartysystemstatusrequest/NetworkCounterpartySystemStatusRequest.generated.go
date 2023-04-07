@@ -201,7 +201,8 @@ type NoCompIDsRepeatingGroup struct {
 func NewNoCompIDsRepeatingGroup() NoCompIDsRepeatingGroup {
 	return NoCompIDsRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoCompIDs,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.RefCompID), quickfix.GroupElement(tag.RefSubID), quickfix.GroupElement(tag.LocationID), quickfix.GroupElement(tag.DeskID)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.RefCompID), quickfix.GroupElement(tag.RefSubID), quickfix.GroupElement(tag.LocationID), quickfix.GroupElement(tag.DeskID)}),
+	}
 }
 
 // Add create and append a new NoCompIDs to this group

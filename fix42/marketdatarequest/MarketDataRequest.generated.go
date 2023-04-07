@@ -582,7 +582,8 @@ type NoRelatedSymRepeatingGroup struct {
 func NewNoRelatedSymRepeatingGroup() NoRelatedSymRepeatingGroup {
 	return NoRelatedSymRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoRelatedSym,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.Symbol), quickfix.GroupElement(tag.SymbolSfx), quickfix.GroupElement(tag.SecurityID), quickfix.GroupElement(tag.IDSource), quickfix.GroupElement(tag.SecurityType), quickfix.GroupElement(tag.MaturityMonthYear), quickfix.GroupElement(tag.MaturityDay), quickfix.GroupElement(tag.PutOrCall), quickfix.GroupElement(tag.StrikePrice), quickfix.GroupElement(tag.OptAttribute), quickfix.GroupElement(tag.ContractMultiplier), quickfix.GroupElement(tag.CouponRate), quickfix.GroupElement(tag.SecurityExchange), quickfix.GroupElement(tag.Issuer), quickfix.GroupElement(tag.EncodedIssuerLen), quickfix.GroupElement(tag.EncodedIssuer), quickfix.GroupElement(tag.SecurityDesc), quickfix.GroupElement(tag.EncodedSecurityDescLen), quickfix.GroupElement(tag.EncodedSecurityDesc), quickfix.GroupElement(tag.TradingSessionID)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.Symbol), quickfix.GroupElement(tag.SymbolSfx), quickfix.GroupElement(tag.SecurityID), quickfix.GroupElement(tag.IDSource), quickfix.GroupElement(tag.SecurityType), quickfix.GroupElement(tag.MaturityMonthYear), quickfix.GroupElement(tag.MaturityDay), quickfix.GroupElement(tag.PutOrCall), quickfix.GroupElement(tag.StrikePrice), quickfix.GroupElement(tag.OptAttribute), quickfix.GroupElement(tag.ContractMultiplier), quickfix.GroupElement(tag.CouponRate), quickfix.GroupElement(tag.SecurityExchange), quickfix.GroupElement(tag.Issuer), quickfix.GroupElement(tag.EncodedIssuerLen), quickfix.GroupElement(tag.EncodedIssuer), quickfix.GroupElement(tag.SecurityDesc), quickfix.GroupElement(tag.EncodedSecurityDescLen), quickfix.GroupElement(tag.EncodedSecurityDesc), quickfix.GroupElement(tag.TradingSessionID)}),
+	}
 }
 
 // Add create and append a new NoRelatedSym to this group
@@ -629,7 +630,8 @@ type NoMDEntryTypesRepeatingGroup struct {
 func NewNoMDEntryTypesRepeatingGroup() NoMDEntryTypesRepeatingGroup {
 	return NoMDEntryTypesRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoMDEntryTypes,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.MDEntryType)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.MDEntryType)}),
+	}
 }
 
 // Add create and append a new NoMDEntryTypes to this group

@@ -239,7 +239,8 @@ type NoMsgTypesRepeatingGroup struct {
 func NewNoMsgTypesRepeatingGroup() NoMsgTypesRepeatingGroup {
 	return NoMsgTypesRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoMsgTypes,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.RefMsgType), quickfix.GroupElement(tag.MsgDirection)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.RefMsgType), quickfix.GroupElement(tag.MsgDirection)}),
+	}
 }
 
 // Add create and append a new NoMsgTypes to this group

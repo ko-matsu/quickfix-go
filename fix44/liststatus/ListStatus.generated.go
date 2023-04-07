@@ -532,7 +532,8 @@ type NoOrdersRepeatingGroup struct {
 func NewNoOrdersRepeatingGroup() NoOrdersRepeatingGroup {
 	return NoOrdersRepeatingGroup{
 		quickfix.NewRepeatingGroup(tag.NoOrders,
-			quickfix.GroupTemplate{quickfix.GroupElement(tag.ClOrdID), quickfix.GroupElement(tag.SecondaryClOrdID), quickfix.GroupElement(tag.CumQty), quickfix.GroupElement(tag.OrdStatus), quickfix.GroupElement(tag.WorkingIndicator), quickfix.GroupElement(tag.LeavesQty), quickfix.GroupElement(tag.CxlQty), quickfix.GroupElement(tag.AvgPx), quickfix.GroupElement(tag.OrdRejReason), quickfix.GroupElement(tag.Text), quickfix.GroupElement(tag.EncodedTextLen), quickfix.GroupElement(tag.EncodedText)})}
+			quickfix.GroupTemplate{quickfix.GroupElement(tag.ClOrdID), quickfix.GroupElement(tag.SecondaryClOrdID), quickfix.GroupElement(tag.CumQty), quickfix.GroupElement(tag.OrdStatus), quickfix.GroupElement(tag.WorkingIndicator), quickfix.GroupElement(tag.LeavesQty), quickfix.GroupElement(tag.CxlQty), quickfix.GroupElement(tag.AvgPx), quickfix.GroupElement(tag.OrdRejReason), quickfix.GroupElement(tag.Text), quickfix.GroupElement(tag.EncodedTextLen), quickfix.GroupElement(tag.EncodedText)}),
+	}
 }
 
 // Add create and append a new NoOrders to this group

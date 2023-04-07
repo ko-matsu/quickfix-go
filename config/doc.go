@@ -371,11 +371,15 @@ Directory to store sequence number and message files.  Only used with FileStoreF
 
 # MongoStoreConnection
 
-The MongoDB connection URL to use (see https://godoc.org/github.com/globalsign/mgo#Dial for the URL Format).  Only used with MongoStoreFactory.
+The MongoDB connection URL to use (see https://pkg.go.dev/go.mongodb.org/mongo-driver/mongo#Connect for more info).  Only used with MongoStoreFactory.
 
 # MongoStoreDatabase
 
 The MongoDB-specific name of the database to use.  Only used with MongoStoreFactory.
+
+# MongoStoreReplicaSet
+
+The MongoDB-specific name of the replica set to use. Optional, only used with MongoStoreFactory.
 
 # SQLStoreDriver
 

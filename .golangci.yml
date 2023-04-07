@@ -21,5 +21,23 @@ linters:
   enable:
     - exportloopref
     - goimports
+    - dupl
+    - gofmt
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - revive
+    - unused
+    - staticcheck
+    - godot
   disable:
     - structcheck
+
+linters-settings:
+  gofmt:
+    simplify: true
+  goimports:
+    local-prefixes: github.com/quickfixgo/quickfix
+  dupl:
+    threshold: 400

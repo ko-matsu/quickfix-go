@@ -1,3 +1,4 @@
+
 all: vet test
 
 clean:
@@ -22,7 +23,7 @@ format:
 	go run golang.org/x/tools/cmd/goimports@v0.7.0 -w .
 
 fmt:
-	go fmt `go list ./... | grep -v quickfix/gen`
+	gofmt -l -w -s $(shell find . -type f -name '*.go')
 
 vet:
 	go vet . ./config ./datadictionary ./enum ./field ./internal ./tag
@@ -36,7 +37,7 @@ lint-fix:
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.52.2 run --fix
 
 test: 
-	go test -v -cover -p=1 -count=1 . ./datadictionary ./internal
+	MONGODB_TEST_CXN=mongodb://db:27017 go test -v -cover -p=1 -count=1 . ./datadictionary ./internal
 
 _build_all: 
 	go build -v . ./config ./datadictionary ./enum ./field ./fix42 ./fix44 ./internal ./tag ./cmd/generate-fix ./cmd/generate-fix/internal
@@ -48,11 +49,14 @@ build_all_win:
 	cd fix42; go build -v `go list ./...`
 	cd fix44; go build -v `go list ./...`
 
-build_accept: 
-	cd _test; go build -o echo_server
+lint: linters-install
+	golangci-lint run
 
-build: _build_all build_accept
+# ---------------------------------------------------------------
+# Targets related to running acceptance tests -
 
+build-test-srv:
+	cd _test; go build -o echo_server ./test-server/
 fix40:
 	cd _test; ./runat.sh $@.cfg 5001 "definitions/server/$@/*.def"
 fix41:
@@ -75,3 +79,20 @@ ACCEPT_SUITE=fix42 fix44
 accept: $(ACCEPT_SUITE)
 
 .PHONY: test $(ACCEPT_SUITE)
+# ---------------------------------------------------------------
+
+# ---------------------------------------------------------------
+# These targets are specific to the Github CI Runner -
+
+build-src:
+	go build -v `go list ./...`
+
+build: build-src build-test-srv
+
+test-ci:
+	go test -v -cover . ./datadictionary ./internal
+
+generate-ci: clean
+	mkdir -p gen; cd gen; go run ../cmd/generate-fix/generate-fix.go -pkg-root=github.com/quickfixgo/quickfix/gen ../spec/$(shell echo $(FIX_TEST) | tr  '[:lower:]' '[:upper:]').xml; 
+
+# ---------------------------------------------------------------

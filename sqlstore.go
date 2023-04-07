@@ -1,3 +1,18 @@
+// Copyright (c) quickfixengine.org  All rights reserved.
+//
+// This file may be distributed under the terms of the quickfixengine.org
+// license as defined by quickfixengine.org and appearing in the file
+// LICENSE included in the packaging of this file.
+//
+// This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING
+// THE WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A
+// PARTICULAR PURPOSE.
+//
+// See http://www.quickfixengine.org/LICENSE for licensing information.
+//
+// Contact ask@quickfixengine.org if any conditions of this licensing
+// are not clear to you.
+
 package quickfix
 
 import (
@@ -33,12 +48,12 @@ type dbSettings struct {
 	connMaxOpen     int
 }
 
-// NewSQLStoreFactory returns a sql-based implementation of MessageStoreFactory
+// NewSQLStoreFactory returns a sql-based implementation of MessageStoreFactory.
 func NewSQLStoreFactory(settings *Settings) MessageStoreFactory {
 	return sqlStoreFactory{settings: settings}
 }
 
-// Create creates a new SQLStore implementation of the MessageStore interface
+// Create creates a new SQLStore implementation of the MessageStore interface.
 func (f sqlStoreFactory) Create(sessionID SessionID) (msgStore MessageStore, err error) {
 	var sqlDriver string
 	var sqlDataSourceName string
@@ -214,17 +229,17 @@ func (store *sqlStore) populateCache() (err error) {
 		s.TargetCompID, s.TargetSubID, s.TargetLocationID).Error
 }
 
-// NextSenderMsgSeqNum returns the next MsgSeqNum that will be sent
+// NextSenderMsgSeqNum returns the next MsgSeqNum that will be sent.
 func (store *sqlStore) NextSenderMsgSeqNum() int {
 	return store.cache.NextSenderMsgSeqNum()
 }
 
-// NextTargetMsgSeqNum returns the next MsgSeqNum that should be received
+// NextTargetMsgSeqNum returns the next MsgSeqNum that should be received.
 func (store *sqlStore) NextTargetMsgSeqNum() int {
 	return store.cache.NextTargetMsgSeqNum()
 }
 
-// SetNextSenderMsgSeqNum sets the next MsgSeqNum that will be sent
+// SetNextSenderMsgSeqNum sets the next MsgSeqNum that will be sent.
 func (store *sqlStore) SetNextSenderMsgSeqNum(next int) error {
 	if store.db == nil {
 		return ErrAccessToClosedStore
@@ -242,7 +257,7 @@ func (store *sqlStore) SetNextSenderMsgSeqNum(next int) error {
 	return store.cache.SetNextSenderMsgSeqNum(next)
 }
 
-// SetNextTargetMsgSeqNum sets the next MsgSeqNum that should be received
+// SetNextTargetMsgSeqNum sets the next MsgSeqNum that should be received.
 func (store *sqlStore) SetNextTargetMsgSeqNum(next int) error {
 	if store.db == nil {
 		return ErrAccessToClosedStore
@@ -260,19 +275,19 @@ func (store *sqlStore) SetNextTargetMsgSeqNum(next int) error {
 	return store.cache.SetNextTargetMsgSeqNum(next)
 }
 
-// IncrNextSenderMsgSeqNum increments the next MsgSeqNum that will be sent
+// IncrNextSenderMsgSeqNum increments the next MsgSeqNum that will be sent.
 func (store *sqlStore) IncrNextSenderMsgSeqNum() error {
 	store.cache.IncrNextSenderMsgSeqNum()
 	return store.SetNextSenderMsgSeqNum(store.cache.NextSenderMsgSeqNum())
 }
 
-// IncrNextTargetMsgSeqNum increments the next MsgSeqNum that should be received
+// IncrNextTargetMsgSeqNum increments the next MsgSeqNum that should be received.
 func (store *sqlStore) IncrNextTargetMsgSeqNum() error {
 	store.cache.IncrNextTargetMsgSeqNum()
 	return store.SetNextTargetMsgSeqNum(store.cache.NextTargetMsgSeqNum())
 }
 
-// CreationTime returns the creation time of the store
+// CreationTime returns the creation time of the store.
 func (store *sqlStore) CreationTime() time.Time {
 	return store.cache.CreationTime()
 }

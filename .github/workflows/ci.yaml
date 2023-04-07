@@ -12,6 +12,7 @@ on:
       - master
       - main
       - develop
+
 jobs:
   golangci:
     name: lint
@@ -19,17 +20,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: reviewdog/action-golangci-lint@v2
         with:
-          version: v1.48.0
-          args: --timeout=10m --skip-dirs=fix42,fix44 --exclude="Error return value of .(store.cache.*|suite.msgStore.*). is not checke"
+          golangci_lint_version: v1.52.2
 
   build:
     name: build
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        go: [1.16.x, 1.18.x]
+        go: ['~1.18.0', '~1.19.0', '~1.20.0']
         fix-version:
 #          - FIX_TEST=
 #          - FIX_TEST=fix40

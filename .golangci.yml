@@ -1,5 +1,5 @@
 service:
-  golangci-lint-version: 1.48.0
+  golangci-lint-version: 1.52.2
 run:
   deadline: 30m
   skip-dirs:
@@ -7,6 +7,8 @@ run:
     - fix42
     - fix44
   modules-download-mode: readonly
+
+#--timeout=10m --skip-dirs=fix42,fix44 --exclude="Error return value of .(store.cache.*|suite.msgStore.*). is not checke"
 
 issues:
   exclude-use-default: false

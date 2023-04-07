@@ -27,7 +27,7 @@ vet:
 	go vet ./_test
 
 lint:
-	golangci-lint run
+	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.52.2 run
 
 test: 
 	go test -v -cover -p=1 -count=1 . ./datadictionary ./internal

@@ -23,6 +23,7 @@ import (
 	"github.com/cryptogarageinc/quickfix-go/config"
 	"github.com/cryptogarageinc/quickfix-go/datadictionary"
 	"github.com/cryptogarageinc/quickfix-go/internal"
+	"github.com/pkg/errors"
 )
 
 var dayLookup = map[string]time.Weekday{

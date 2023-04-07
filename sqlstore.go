@@ -310,6 +310,50 @@ func (store *sqlStore) SaveMessage(seqNum int, msg []byte) error {
 		s.TargetCompID, s.TargetSubID, s.TargetLocationID).Error
 }
 
+func (store *sqlStore) SaveMessageAndIncrNextSenderMsgSeqNum(seqNum int, msg []byte) error {
+	if store.db == nil {
+		return ErrAccessToClosedStore
+	}
+	s := store.sessionID
+
+	err := store.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(`INSERT INTO messages (
+			msgseqnum, message,
+			beginstring, session_qualifier,
+			sendercompid, sendersubid, senderlocid,
+			targetcompid, targetsubid, targetlocid)
+			VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			seqNum, string(msg),
+			s.BeginString, s.Qualifier,
+			s.SenderCompID, s.SenderSubID, s.SenderLocationID,
+			s.TargetCompID, s.TargetSubID, s.TargetLocationID).Error; err != nil {
+			return err
+		}
+
+		checkSeqNum := store.cache.NextSenderMsgSeqNum()
+		if seqNum != checkSeqNum {
+			return errors.New("internal error: unmatch seqnum")
+		}
+		nextSeqNum := seqNum + 1
+		if err := tx.Exec(`UPDATE sessions SET outgoing_seqnum = ?
+			WHERE beginstring = ? AND session_qualifier = ?
+			AND sendercompid = ? AND sendersubid = ? AND senderlocid = ?
+			AND targetcompid = ? AND targetsubid = ? AND targetlocid = ?`,
+			nextSeqNum, s.BeginString, s.Qualifier,
+			s.SenderCompID, s.SenderSubID, s.SenderLocationID,
+			s.TargetCompID, s.TargetSubID, s.TargetLocationID).Error; err != nil {
+			return err
+		}
+		return store.cache.SetNextSenderMsgSeqNum(nextSeqNum)
+	})
+	if err != nil {
+		_ = store.Refresh()
+		// Response should also be returned in case of an error.
+		return err
+	}
+	return nil
+}
+
 func (store *sqlStore) GetMessages(beginSeqNum, endSeqNum int) ([][]byte, error) {
 	if store.db == nil {
 		return nil, ErrAccessToClosedStore

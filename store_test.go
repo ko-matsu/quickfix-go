@@ -140,7 +140,7 @@ func (suite *MessageStoreTestSuite) TestMessageStore_SaveMessage_GetMessage() {
 	assert.Equal(t, expectedMsgsBySeqNum[2], string(actualMsgs[2]))
 }
 
-func (suite *MessageStoreTestSuite) TestMessageStore_GetMessages_EmptyStore() {
+func (s *MessageStoreTestSuite) TestMessageStore_GetMessages_EmptyStore() {
 	// When messages are retrieved from an empty store
 	messages, err := s.msgStore.GetMessages(1, 2)
 	require.Nil(s.T(), err)

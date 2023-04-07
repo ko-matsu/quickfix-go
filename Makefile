@@ -93,6 +93,6 @@ test-ci:
 	go test -v -cover . ./datadictionary ./internal
 
 generate-ci: clean
-	mkdir -p gen; cd gen; go run ../cmd/generate-fix/generate-fix.go -pkg-root=github.com/quickfixgo/quickfix/gen ../spec/$(shell echo $(FIX_TEST) | tr  '[:lower:]' '[:upper:]').xml; 
+	mkdir -p gen; cd gen; go run ../cmd/generate-fix/generate-fix.go -pkg-root=github.com/cryptogarageinc/quickfix-go/gen ../spec/$(shell echo $(FIX_TEST) | tr  '[:lower:]' '[:upper:]').xml; 
 
 # ---------------------------------------------------------------

@@ -135,6 +135,9 @@ type FieldDef struct {
 	requiredFields []*FieldDef
 }
 
+// FieldDefs models multiple FieldDef.
+type FieldDefs []*FieldDef
+
 // NewFieldDef returns an initialized FieldDef.
 func NewFieldDef(fieldType *FieldType, required bool) *FieldDef {
 	return &FieldDef{

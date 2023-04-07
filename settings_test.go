@@ -23,8 +23,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-
-	"github.com/quickfixgo/quickfix/config"
 )
 
 func TestSettings_New(t *testing.T) {

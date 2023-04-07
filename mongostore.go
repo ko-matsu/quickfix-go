@@ -21,9 +21,10 @@ import (
 	"time"
 
 	"github.com/cryptogarageinc/quickfix-go/config"
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type mongoStoreFactory struct {
@@ -63,6 +64,7 @@ func NewMongoStoreFactoryPrefixed(settings *Settings, collectionsPrefix string) 
 func (f mongoStoreFactory) Create(sessionID SessionID) (msgStore MessageStore, err error) {
 	var mongoConnectionURL string
 	var mongoDatabase string
+	var mongoReplicaSet string
 
 	settings := make([]*SessionSettings, 1, 2)
 	settings[0] = f.settings.GlobalSettings()
@@ -82,6 +84,14 @@ func (f mongoStoreFactory) Create(sessionID SessionID) (msgStore MessageStore, e
 				return nil, err
 			}
 		}
+
+		// Optional.
+		if sessionSettings.HasSetting(config.MongoStoreReplicaSet) {
+			mongoReplicaSet, err = sessionSettings.Setting(config.MongoStoreReplicaSet)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	if len(mongoConnectionURL) == 0 {
@@ -89,7 +99,7 @@ func (f mongoStoreFactory) Create(sessionID SessionID) (msgStore MessageStore, e
 	} else if len(mongoDatabase) == 0 {
 		return nil, fmt.Errorf("MongoStoreDatabase configuration is not found. session: %v", sessionID)
 	}
-	return newMongoStore(sessionID, mongoConnectionURL, mongoDatabase, f.messagesCollection, f.sessionsCollection)
+	return newMongoStore(sessionID, mongoConnectionURL, mongoDatabase, mongoReplicaSet, f.messagesCollection, f.sessionsCollection)
 }
 
 func newMongoStore(sessionID SessionID, mongoURL, mongoDatabase, mongoReplicaSet, messagesCollection, sessionsCollection string) (store *mongoStore, err error) {
@@ -370,12 +380,20 @@ func (store *mongoStore) GetMessages(beginSeqNum, endSeqNum int) (msgs [][]byte,
 		"$gte": beginSeqNum,
 		"$lte": endSeqNum,
 	}
+	sortOpt := options.Find().SetSort(bson.D{{Key: "msgseq", Value: 1}})
+	cursor, err := store.db.Database(store.mongoDatabase).Collection(store.messagesCollection).Find(context.Background(), seqFilter, sortOpt)
+	if err != nil {
+		return
+	}
 
-	iter := store.db.DB(store.mongoDatabase).C(store.messagesCollection).Find(seqFilter).Sort("msgseq").Iter()
-	for iter.Next(msgFilter) {
+	for cursor.Next(context.Background()) {
+		if err = cursor.Decode(&msgFilter); err != nil {
+			return
+		}
 		msgs = append(msgs, msgFilter.Message)
 	}
-	err = iter.Close()
+
+	err = cursor.Close(context.Background())
 	return
 }
 

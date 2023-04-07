@@ -57,6 +57,7 @@ const (
 	SQLStoreConnMaxOpen           string = "SQLStoreConnMaxOpen"
 	MongoStoreConnection          string = "MongoStoreConnection"
 	MongoStoreDatabase            string = "MongoStoreDatabase"
+	MongoStoreReplicaSet          string = "MongoStoreReplicaSet"
 	ValidateFieldsOutOfOrder      string = "ValidateFieldsOutOfOrder"
 	ResendRequestChunkSize        string = "ResendRequestChunkSize"
 	EnableLastMsgSeqNumProcessed  string = "EnableLastMsgSeqNumProcessed"

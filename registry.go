@@ -17,12 +17,12 @@ var ErrDuplicateSessionID = errors.New("duplicate SessionID")
 // ErrUnknownSession defines unknown session
 var ErrUnknownSession = errors.New("unknown session")
 
-//Messagable is a Message or something that can be converted to a Message
+// Messagable is a Message or something that can be converted to a Message
 type Messagable interface {
 	ToMessage() *Message
 }
 
-//Send determines the session to send Messagable using header fields BeginString, TargetCompID, SenderCompID
+// Send determines the session to send Messagable using header fields BeginString, TargetCompID, SenderCompID
 func Send(m Messagable) (err error) {
 	msg := m.ToMessage()
 	var beginString FIXString
@@ -46,7 +46,7 @@ func Send(m Messagable) (err error) {
 	return SendToTarget(msg, sessionID)
 }
 
-//SendToTarget sends a message based on the sessionID. Convenient for use in FromApp since it provides a session ID for incoming messages
+// SendToTarget sends a message based on the sessionID. Convenient for use in FromApp since it provides a session ID for incoming messages
 func SendToTarget(m Messagable, sessionID SessionID) error {
 	msg := m.ToMessage()
 	session, ok := lookupSession(sessionID)
@@ -57,7 +57,7 @@ func SendToTarget(m Messagable, sessionID SessionID) error {
 	return session.queueForSend(msg)
 }
 
-//UnregisterSession removes a session from the set of known sessions
+// UnregisterSession removes a session from the set of known sessions
 func UnregisterSession(sessionID SessionID) (err error) {
 	sessionsLock.Lock()
 	s, ok := sessions[sessionID]

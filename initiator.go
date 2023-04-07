@@ -11,7 +11,7 @@ import (
 	"golang.org/x/net/proxy"
 )
 
-//Initiator initiates connections and processes messages for all sessions.
+// Initiator initiates connections and processes messages for all sessions.
 type Initiator struct {
 	app             Application
 	settings        *Settings
@@ -25,7 +25,7 @@ type Initiator struct {
 	sessionFactory
 }
 
-//Start Initiator.
+// Start Initiator.
 func (i *Initiator) Start() (err error) {
 	i.stopChan = make(chan interface{})
 
@@ -51,7 +51,7 @@ func (i *Initiator) Start() (err error) {
 	return
 }
 
-//Stop Initiator.
+// Stop Initiator.
 func (i *Initiator) Stop() {
 	select {
 	case <-i.stopChan:
@@ -63,7 +63,7 @@ func (i *Initiator) Stop() {
 	i.wg.Wait()
 }
 
-//NewInitiator creates and initializes a new Initiator.
+// NewInitiator creates and initializes a new Initiator.
 func NewInitiator(app Application, storeFactory MessageStoreFactory, appSettings *Settings, logFactory LogFactory) (*Initiator, error) {
 	i := &Initiator{
 		app:             app,
@@ -93,7 +93,7 @@ func NewInitiator(app Application, storeFactory MessageStoreFactory, appSettings
 	return i, nil
 }
 
-//waitForInSessionTime returns true if the session is in session, false if the handler should stop
+// waitForInSessionTime returns true if the session is in session, false if the handler should stop
 func (i *Initiator) waitForInSessionTime(session *session) bool {
 	inSessionTime := make(chan interface{})
 	go func() {
@@ -110,7 +110,7 @@ func (i *Initiator) waitForInSessionTime(session *session) bool {
 	return true
 }
 
-//waitForReconnectInterval returns true if a reconnect should be re-attempted, false if handler should stop
+// waitForReconnectInterval returns true if a reconnect should be re-attempted, false if handler should stop
 func (i *Initiator) waitForReconnectInterval(reconnectInterval time.Duration) bool {
 	select {
 	case <-time.After(reconnectInterval):

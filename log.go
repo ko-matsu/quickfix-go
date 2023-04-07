@@ -90,7 +90,7 @@ func LogObject(name string, value interface{}) LogParam {
 	}
 }
 
-//Log is a generic interface for logging FIX messages and events.
+// Log is a generic interface for logging FIX messages and events.
 type Log interface {
 	//log incoming fix message
 	OnIncoming([]byte)
@@ -114,7 +114,7 @@ type Log interface {
 	OnErrorEventParams(string, error, ...LogParam)
 }
 
-//The LogFactory interface creates global and session specific Log instances
+// The LogFactory interface creates global and session specific Log instances
 type LogFactory interface {
 	//global log
 	Create() (Log, error)

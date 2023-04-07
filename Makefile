@@ -18,6 +18,9 @@ generate-dist:
 generate-dist-win:
 	go run cmd/generate-fix/generate-fix.go spec/FIX42.xml spec/FIX44.xml
 
+format:
+	go run golang.org/x/tools/cmd/goimports@v0.7.0 -w .
+
 fmt:
 	go fmt `go list ./... | grep -v quickfix/gen`
 
@@ -28,6 +31,9 @@ vet:
 
 lint:
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.52.2 run
+
+lint-fix:
+	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.52.2 run --fix
 
 test: 
 	go test -v -cover -p=1 -count=1 . ./datadictionary ./internal

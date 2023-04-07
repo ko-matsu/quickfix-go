@@ -20,5 +20,6 @@ issues:
 linters:
   enable:
     - exportloopref
+    - goimports
   disable:
     - structcheck

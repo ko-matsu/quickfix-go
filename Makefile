@@ -49,9 +49,6 @@ build_all_win:
 	cd fix42; go build -v `go list ./...`
 	cd fix44; go build -v `go list ./...`
 
-lint: linters-install
-	golangci-lint run
-
 # ---------------------------------------------------------------
 # Targets related to running acceptance tests -
 

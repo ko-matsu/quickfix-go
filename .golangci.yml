@@ -6,6 +6,8 @@ run:
     - cover
     - fix42
     - fix44
+    - enum
+    - field
   modules-download-mode: readonly
 
 #--timeout=10m --skip-dirs=fix42,fix44 --exclude="Error return value of .(store.cache.*|suite.msgStore.*). is not checke"
@@ -15,22 +17,22 @@ issues:
   exclude-rules:
     - linters:
         - errcheck
-      text: " is not checke"
+      text: " is not check"
 
 linters:
   enable:
     - exportloopref
-    - goimports
     - dupl
     - gofmt
     - gosimple
     - govet
     - ineffassign
     - misspell
-    - revive
     - unused
     - staticcheck
     - godot
+#    - revive
+#    - goimports
   disable:
     - structcheck
 

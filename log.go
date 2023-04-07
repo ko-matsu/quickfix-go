@@ -24,16 +24,19 @@ func makeReadable(s []byte) string {
 	return string(bytes.Replace(s, []byte("\x01"), []byte("|"), -1))
 }
 
+// LogParam ...
 type LogParam struct {
 	Name   string
 	Value  interface{}
 	format string
 }
 
+// GetFormat ...
 func (l LogParam) GetFormat() string {
 	return l.format
 }
 
+// String ...
 func (l LogParam) String() string {
 	switch l.format {
 	case "%s":
@@ -49,6 +52,7 @@ func (l LogParam) String() string {
 	}
 }
 
+// LogMessage ...
 func LogMessage(name string, msgBytes []byte) LogParam {
 	return LogParam{
 		Name:   name,
@@ -57,6 +61,7 @@ func LogMessage(name string, msgBytes []byte) LogParam {
 	}
 }
 
+// LogString ...
 func LogString(name, value string) LogParam {
 	return LogParam{
 		Name:   name,
@@ -65,6 +70,7 @@ func LogString(name, value string) LogParam {
 	}
 }
 
+// LogStringWithSingleQuote ...
 func LogStringWithSingleQuote(name, value string) LogParam {
 	return LogParam{
 		Name:   name,
@@ -73,6 +79,7 @@ func LogStringWithSingleQuote(name, value string) LogParam {
 	}
 }
 
+// LogInt ...
 func LogInt(name string, value int) LogParam {
 	return LogParam{
 		Name:   name,
@@ -81,6 +88,7 @@ func LogInt(name string, value int) LogParam {
 	}
 }
 
+// LogInt64 ...
 func LogInt64(name string, value int64) LogParam {
 	return LogParam{
 		Name:   name,
@@ -89,6 +97,7 @@ func LogInt64(name string, value int64) LogParam {
 	}
 }
 
+// LogUint64 ...
 func LogUint64(name string, value uint64) LogParam {
 	return LogParam{
 		Name:   name,
@@ -97,6 +106,7 @@ func LogUint64(name string, value uint64) LogParam {
 	}
 }
 
+// LogObject ...
 func LogObject(name string, value interface{}) LogParam {
 	return LogParam{
 		Name:   name,
@@ -119,13 +129,13 @@ type Log interface {
 	// OnEventf log fix event according to format specifier.
 	OnEventf(string, ...interface{})
 
-	//log fix error event
+	// OnErrorEvent log fix error event
 	OnErrorEvent(string, error)
 
-	//log fix event according to logging parameter
+	// OnEventParams log fix event according to logging parameter
 	OnEventParams(string, ...LogParam)
 
-	//log fix error event according to logging parameter
+	// OnErrorEventParams log fix error event according to logging parameter
 	OnErrorEventParams(string, error, ...LogParam)
 }
 

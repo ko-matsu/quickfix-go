@@ -15,7 +15,7 @@
 
 package quickfix
 
-// FIX BeginString string values
+// FIX BeginString string values.
 const (
 	BeginStringFIX40  = "FIX.4.0"
 	BeginStringFIX41  = "FIX.4.1"

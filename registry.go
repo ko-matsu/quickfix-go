@@ -26,10 +26,10 @@ import (
 var sessionsLock sync.RWMutex
 var sessions = make(map[SessionID]*session)
 
-// ErrDuplicateSessionID defines duplicate SessionID
+// ErrDuplicateSessionID defines duplicate SessionID.
 var ErrDuplicateSessionID = errors.New("duplicate SessionID")
 
-// ErrUnknownSession defines unknown session
+// ErrUnknownSession defines unknown session.
 var ErrUnknownSession = errors.New("unknown session")
 
 // Messagable is a Message or something that can be converted to a Message.
@@ -71,7 +71,7 @@ func SendToTarget(m Messagable, sessionID SessionID) error {
 	return session.queueForSend(msg)
 }
 
-// UnregisterSession removes a session from the set of known sessions
+// UnregisterSession removes a session from the set of known sessions.
 func UnregisterSession(sessionID SessionID) (err error) {
 	sessionsLock.Lock()
 	s, ok := sessions[sessionID]

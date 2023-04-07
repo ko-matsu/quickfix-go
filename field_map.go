@@ -254,7 +254,7 @@ func (m *FieldMap) CopyInto(to *FieldMap) {
 	to.compare = m.compare
 }
 
-// DeleteTag removes a tag's value from field map, if present
+// DeleteTag removes a tag's value from field map, if present.
 func (m *FieldMap) DeleteTag(tag Tag) {
 	m.rwLock.RLock()
 	defer m.rwLock.RUnlock()

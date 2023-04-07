@@ -141,7 +141,7 @@ func newSQLStore(sessionID SessionID, driver string, dataSourceName string, dbs 
 	return store, nil
 }
 
-// Reset deletes the store records and sets the seqnums back to 1
+// Reset deletes the store records and sets the seqnums back to 1.
 func (store *sqlStore) Reset() (err error) {
 	if store.db == nil {
 		return ErrAccessToClosedStore
@@ -176,7 +176,7 @@ func (store *sqlStore) reset(tx *gorm.DB) (err error) {
 		s.TargetCompID, s.TargetSubID, s.TargetLocationID).Error
 }
 
-// Refresh reloads the store from the database
+// Refresh reloads the store from the database.
 func (store *sqlStore) Refresh() (err error) {
 	if err = store.cache.Reset(); err != nil {
 		return err
@@ -468,7 +468,7 @@ func (store *sqlStore) SaveMessageWithTx(messageBuildData *BuildMessageInput) (o
 	return output, nil
 }
 
-// Close closes the store's database connection
+// Close closes the store's database connection.
 func (store *sqlStore) Close() error {
 	if store.db != nil {
 		store.db.Close()

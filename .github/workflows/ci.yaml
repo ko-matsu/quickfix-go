@@ -32,12 +32,14 @@ jobs:
           golangci_lint_version: v1.52.2
 
   build:
+    timeout-minutes: 30
     name: build
     runs-on: ubuntu-22.04
     strategy:
       matrix:
         go: ['~1.18.0', '~1.19.0', '~1.20.0']
         fix-version:
+          - ''
           - fix42
           - fix44
     steps:
@@ -48,7 +50,7 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v3
       - name: Install ruby
-        uses: ruby/setup-ruby@v3
+        uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.0'
       - uses: actions/cache@v3
@@ -63,16 +65,15 @@ jobs:
       - name: mod download
         run: go mod download
 
-      - name: Run Mongo
-        run: docker compose up -d mongo
+      - name: Start MongoDB
+        uses: supercharge/mongodb-github-action@v1
+        with:
+          mongodb-replica-set: replicaset
 
       - name: Test
         env:
-          GO111MODULE: "on"
-          MONGODB_TEST_CXN: "mongodb://localhost:27017/"
+          GO111MODULE: on
+          MONGODB_TEST_CXN: mongodb://localhost:27017
           FIX_TEST: ${{ matrix.fix-version }}
-        run: make generate; if [ -z "$FIX_TEST" ]; then make build; make; else make build_accept; make $FIX_TEST; fi
-
-      - name: after test
-        if: always()
-        run: docker compose down
+        run: if [ -z $FIX_TEST ]; then make build-src && make test-ci; else make generate-ci && make build && make $FIX_TEST; fi
+        #make generate; if [ -z "$FIX_TEST" ]; then make build; make; else make build-test-srv; make $FIX_TEST; fi

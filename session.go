@@ -467,7 +467,13 @@ func (s *session) handleLogon(msg *Message) error {
 
 	s.peerTimer.Reset(time.Duration(float64(1.2) * float64(s.HeartBtInt)))
 	s.application.OnLogon(s.sessionID)
-	s.notifyLogonEvent <- struct{}{}
+
+	// for WaitForLogon.
+	// If WaitForLogon is not used, it will remain in the buffer, in which case it will not be sent.
+	select {
+	case s.notifyLogonEvent <- struct{}{}:
+	default:
+	}
 
 	if err := s.checkTargetTooHigh(msg); err != nil {
 		return err

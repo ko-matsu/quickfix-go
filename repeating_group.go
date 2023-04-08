@@ -254,6 +254,7 @@ func (f *RepeatingGroup) Read(tv []TagValue) ([]TagValue, error) {
 
 		group.rwLock.Lock()
 		group.tagLookup[tvRange[0].tag] = tvRange
+		group.tags = append(group.tags, gi.Tag())
 		prevTag = tvRange[0].tag
 		group.rwLock.Unlock()
 	}

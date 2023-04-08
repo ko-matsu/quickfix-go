@@ -375,7 +375,8 @@ func (a *Acceptor) handleConnection(netConn net.Conn) {
 	msgOut := make(chan []byte)
 
 	if err := session.connect(msgIn, msgOut); err != nil {
-		a.globalLog.OnErrorEventParams("Unable to accept", err, LogMessage("incomingMessage", msgBytes.Bytes()))
+		a.globalLog.OnErrorEventParams("Unable to accept", err,
+			LogString("sessionID", sessID.String()), LogMessage("incomingMessage", msgBytes.Bytes()))
 		return
 	}
 	a.sessionAddr.Store(sessID, netConn.RemoteAddr())

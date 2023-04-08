@@ -76,4 +76,3 @@ jobs:
           MONGODB_TEST_CXN: mongodb://localhost:27017
           FIX_TEST: ${{ matrix.fix-version }}
         run: if [ -z $FIX_TEST ]; then make build-src && make test-ci; else make generate-ci && make build && make $FIX_TEST; fi
-        #make generate; if [ -z "$FIX_TEST" ]; then make build; make; else make build-test-srv; make $FIX_TEST; fi

@@ -39,6 +39,10 @@ lint-fix:
 test: 
 	MONGODB_TEST_CXN=mongodb://db:27017 go test -v -cover -p=1 -count=1 . ./datadictionary ./internal
 
+test-local:
+	export MONGODB_TEST_CXN="mongodb://localhost:27017"
+	go test -v -cover -p=1 -count=1 . ./datadictionary ./internal
+
 _build_all: 
 	go build -v . ./config ./datadictionary ./enum ./field ./fix42 ./fix44 ./internal ./tag ./cmd/generate-fix ./cmd/generate-fix/internal
 	cd fix42 && go build -v `go list ./...`
